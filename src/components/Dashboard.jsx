@@ -253,18 +253,121 @@ export default function Dashboard({ data, save }) {
             {pieData.length > 0 && (
               <Card>
                 <SectionTitle>Розподіл по категоріях</SectionTitle>
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" outerRadius={75} innerRadius={32}
-                      dataKey="value" label={({percent})=>`${(percent*100).toFixed(0)}%`} labelLine={false}>
+                    <Pie data={pieData} cx="50%" cy="50%" outerRadius={78} innerRadius={32}
+                      dataKey="value" label={({name,percent})=>`${(percent*100).toFixed(0)}%`} labelLine={true}>
                       {pieData.map((e,i)=><Cell key={i} fill={e.color}/>)}
                     </Pie>
                     <Tooltip formatter={v=>fmt(v)} contentStyle={tooltipStyle}/>
-                    <Legend wrapperStyle={{ fontFamily:"'DM Sans',sans-serif", fontSize:12 }}/>
+                    <Legend wrapperStyle={{ fontFamily:"'DM Sans',sans-serif", fontSize:11 }} layout="vertical" align="right" verticalAlign="middle"/>
                   </PieChart>
                 </ResponsiveContainer>
               </Card>
             )}
+          </div>
+
+          {/* Monthly profit table + Earned card */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginTop:14 }}>
+            <Card>
+              <SectionTitle>Прибуток по місяцях</SectionTitle>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:4, marginBottom:8 }}>
+                {['Місяць','Доходи','Витрати','Прибуток'].map(h=>(
+                  <div key={h} style={{ fontSize:10, color:'#b0a898', fontWeight:700, letterSpacing:.8, textTransform:'uppercase', padding:'4px 6px' }}>{h}</div>
+                ))}
+              </div>
+              {chartData.map((row,i)=>{
+                const income = row.hotel + row.tourism
+                return(
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:4, padding:'8px 6px', background:i%2===0?'#faf9f7':'transparent', borderRadius:8, marginBottom:2 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:'#1a1a1a', textTransform:'capitalize' }}>{row.month}</div>
+                    <div style={{ fontSize:12, color:'#16a34a', fontWeight:600 }}>+{(income/1000).toFixed(1)}к</div>
+                    <div style={{ fontSize:12, color:'#dc2626' }}>-{(row.expense/1000).toFixed(1)}к</div>
+                    <div style={{ fontSize:13, fontWeight:800, color:row.profit>=0?'#2c5f2e':'#dc2626', fontFamily:"'Playfair Display',serif" }}>
+                      {row.profit>=0?'+':''}{(row.profit/1000).toFixed(1)}к
+                    </div>
+                  </div>
+                )
+              })}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:4, padding:'10px 6px', borderTop:'2px solid #e8e4dc', marginTop:6 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#78716c' }}>Разом</div>
+                <div style={{ fontSize:12, color:'#16a34a', fontWeight:700 }}>+{(chartData.reduce((s,d)=>s+d.hotel+d.tourism,0)/1000).toFixed(1)}к</div>
+                <div style={{ fontSize:12, color:'#dc2626', fontWeight:700 }}>-{(chartData.reduce((s,d)=>s+d.expense,0)/1000).toFixed(1)}к</div>
+                <div style={{ fontSize:13, fontWeight:800, color:'#2c5f2e', fontFamily:"'Playfair Display',serif" }}>
+                  +{(chartData.reduce((s,d)=>s+d.profit,0)/1000).toFixed(1)}к
+                </div>
+              </div>
+            </Card>
+
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              <div style={{ background:'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)', border:'1px solid #86efac', borderRadius:16, padding:'22px 22px', flex:1, boxShadow:'0 2px 8px rgba(44,95,46,.08)' }}>
+                <div style={{ fontSize:10, color:'#16a34a', fontWeight:700, letterSpacing:1.5, textTransform:'uppercase', marginBottom:8 }}>💵 Зароблено чистими (всього)</div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:800, color:'#15803d', letterSpacing:-.5 }}>
+                  {fmt(netProfit + totalPersonal)}
+                </div>
+                <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:6 }}>
+                  <span style={{ background:'#bbf7d0', borderRadius:5, padding:'3px 8px', color:'#15803d', fontWeight:600, fontSize:12, display:'inline-block' }}>
+                    Прибуток бізнесу: {fmt(netProfit)}
+                  </span>
+                  <span style={{ background:'#bae6fd', borderRadius:5, padding:'3px 8px', color:'#0369a1', fontWeight:600, fontSize:12, display:'inline-block' }}>
+                    + Вивів собі: {fmt(totalPersonal)}
+                  </span>
+                </div>
+              </div>
+              <div style={{ background:'linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)', border:'1px solid #93c5fd', borderRadius:16, padding:'18px 22px', boxShadow:'0 2px 8px rgba(8,145,178,.06)' }}>
+                <div style={{ fontSize:10, color:'#0891b2', fontWeight:700, letterSpacing:1.5, textTransform:'uppercase', marginBottom:6 }}>🏦 Залишок в бізнесі</div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:800, color:'#1d4ed8' }}>{fmt(balance)}</div>
+                <div style={{ fontSize:11, color:'#93c5fd', marginTop:4 }}>на рахунку зараз</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent + Upcoming */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginTop:14 }}>
+            <Card>
+              <SectionTitle>Останні операції</SectionTitle>
+              {[...data.transactions].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,6).map((t,i,arr)=>{
+                const allCats=[...CATEGORIES.income,...CATEGORIES.expense]
+                const cat=allCats.find(c=>c.id===t.category)
+                const isP=t.category==='personal'
+                const color=isP?'#0891b2':t.type==='income'?'#16a34a':'#dc2626'
+                return(
+                  <div key={t.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 0', borderBottom:i<arr.length-1?'1px solid #f5f3ef':'none' }}>
+                    <div style={{ width:3, height:32, borderRadius:2, background:color, flexShrink:0 }}/>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12, fontWeight:600, color:'#1a1a1a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.counterparty||'—'}</div>
+                      <div style={{ fontSize:10, color:'#b0a898' }}>{cat?.icon} {cat?.label} · {t.date ? new Intl.DateTimeFormat('uk',{day:'numeric',month:'short',year:'numeric'}).format(new Date(t.date)) : ''}</div>
+                    </div>
+                    <div style={{ fontSize:13, fontWeight:700, color, whiteSpace:'nowrap' }}>{t.type==='income'?'+':'-'}{fmt(t.amount)}</div>
+                  </div>
+                )
+              })}
+              {data.transactions.length===0&&<div style={{ color:'#b0a898', fontSize:13, textAlign:'center', padding:20 }}>Немає операцій</div>}
+            </Card>
+            <Card>
+              <SectionTitle>Найближчі платежі</SectionTitle>
+              {[
+                ...data.debtors.filter(d=>!d.paid&&d.due).map(d=>({...d,color:'#16a34a',icon:'📥',prefix:'+'})),
+                ...data.creditors.filter(c=>!c.paid&&c.due).map(c=>({...c,color:'#dc2626',icon:'📤',prefix:'-'})),
+                ...data.returns.filter(r=>!r.paid&&r.due).map(r=>({...r,color:'#7c3aed',icon:'🔄',prefix:'-'})),
+              ].sort((a,b)=>(a.due||'').localeCompare(b.due||'')).slice(0,5).map(item=>{
+                const d=daysUntil(item.due)
+                const lbl=d===null?null:d<0?{text:`Прострочено на ${Math.abs(d)} дн.`,color:'#dc2626'}:d===0?{text:'Сьогодні!',color:'#ea580c'}:d<=3?{text:`Через ${d} дн.`,color:'#ca8a04'}:{text:`Через ${d} дн.`,color:'#78716c'}
+                return(
+                  <div key={item.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 11px', background:lbl?.color==='#dc2626'?'#fef2f2':'#faf9f7', borderRadius:10, marginBottom:6, borderLeft:`3px solid ${item.color}` }}>
+                    <div style={{ fontSize:15 }}>{item.icon}</div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, fontWeight:600, color:'#1a1a1a' }}>{item.name}</div>
+                      <div style={{ fontSize:10, color:lbl?.color||'#b0a898', fontWeight:600, marginTop:1 }}>{item.due ? new Intl.DateTimeFormat('uk',{day:'numeric',month:'short',year:'numeric'}).format(new Date(item.due)) : ''} · {lbl?.text}</div>
+                    </div>
+                    <div style={{ fontSize:13, fontWeight:700, color:item.color, whiteSpace:'nowrap' }}>{item.prefix}{fmt(item.amount)}</div>
+                  </div>
+                )
+              })}
+              {data.debtors.filter(d=>!d.paid&&d.due).length+data.creditors.filter(c=>!c.paid&&c.due).length+data.returns.filter(r=>!r.paid&&r.due).length===0&&(
+                <div style={{ color:'#b0a898', fontSize:13, textAlign:'center', padding:20 }}>Немає запланованих платежів</div>
+              )}
+            </Card>
           </div>
         </>
       ) : (

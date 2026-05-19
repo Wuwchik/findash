@@ -6,6 +6,7 @@ import Debtors from './components/Debtors'
 import Returns from './components/Returns'
 import Import from './components/Import'
 import Calendar from './components/Calendar'
+import Analytics from './components/Analytics'
 
 const TABS = [
   { id: 'dashboard', label: '📊 Дашборд' },
@@ -14,6 +15,7 @@ const TABS = [
   { id: 'debtors',   label: '📥 Борги' },
   { id: 'returns',   label: '🔄 Повернення' },
   { id: 'import',    label: '⬆ Імпорт' },
+  { id: 'analytics', label: '📈 Аналітика' },
 ]
 
 export default function App() {
@@ -81,6 +83,7 @@ export default function App() {
         {tab === 'debtors'       && <Debtors      data={data} save={save} />}
         {tab === 'returns'       && <Returns      data={data} save={save} />}
         {tab === 'import'        && <Import       data={data} save={save} />}
+        {tab === 'analytics'     && <Analytics    data={data} />}
       </div>
     </div>
   )
