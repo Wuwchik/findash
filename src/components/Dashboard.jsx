@@ -310,7 +310,7 @@ export default function Dashboard({ data, save }) {
                     Доходи: {fmt(totalIncome)}
                   </span>
                   <span style={{ background:'#fecaca', borderRadius:5, padding:'3px 8px', color:'#dc2626', fontWeight:600, fontSize:12, display:'inline-block' }}>
-                    - Витрати: {fmt(totalExpBiz + totalReturns)}
+                    - Витрати: {fmt(totalExpense)}
                   </span>
                 </div>
               </div>
