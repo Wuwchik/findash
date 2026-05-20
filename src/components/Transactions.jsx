@@ -30,6 +30,7 @@ function getCounterpartyList(type, category) {
 export default function Transactions({ data, save }) {
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
+  const [filter, setFilter] = useState({ type:'all', category:'all', search:'' })
 
   const addTx = () => {
     if (!form.amount || !form.category || !form.date) return
@@ -42,7 +43,13 @@ export default function Transactions({ data, save }) {
   }
 
   const del = id => save({ ...data, transactions: data.transactions.filter(t => t.id !== id) })
-  const sorted = [...data.transactions].sort((a,b) => (b.date||'').localeCompare(a.date||''))
+  const filtered = data.transactions.filter(t => {
+    if (filter.type !== 'all' && t.type !== filter.type) return false
+    if (filter.category !== 'all' && t.category !== filter.category) return false
+    if (filter.search && !(t.counterparty||'').toLowerCase().includes(filter.search.toLowerCase())) return false
+    return true
+  })
+  const sorted = [...filtered].sort((a,b) => (b.date||'').localeCompare(a.date||''))
   const allCats = [...CATEGORIES.income, ...CATEGORIES.expense]
   const cpList = getCounterpartyList(form.type, form.category)
 
@@ -55,7 +62,35 @@ export default function Transactions({ data, save }) {
         <Btn style={{ background:'#0f766e' }} onClick={() => { setForm({ type:'expense', category:'taxes', date:todayStr() }); setModal('tx') }}>🏛️ Податки</Btn>
       </div>
 
-      <SectionTitle>Всі операції ({data.transactions.length})</SectionTitle>
+      {/* Filters */}
+      <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
+        <input
+          placeholder="🔍 Пошук по контрагенту..."
+          value={filter.search}
+          onChange={e => setFilter(p=>({...p, search:e.target.value}))}
+          style={{ flex:1, minWidth:160, background:'#faf9f7', border:'1px solid #e8e4dc', borderRadius:10, padding:'8px 13px', fontSize:13, outline:'none', fontFamily:"'DM Sans',sans-serif" }}
+        />
+        <select value={filter.type} onChange={e=>setFilter(p=>({...p,type:e.target.value}))}
+          style={{ background:'#faf9f7', border:'1px solid #e8e4dc', borderRadius:10, padding:'8px 13px', fontSize:13, outline:'none', color:'#1a1a1a', fontFamily:"'DM Sans',sans-serif" }}>
+          <option value="all">Всі типи</option>
+          <option value="income">Тільки доходи</option>
+          <option value="expense">Тільки витрати</option>
+        </select>
+        <select value={filter.category} onChange={e=>setFilter(p=>({...p,category:e.target.value}))}
+          style={{ background:'#faf9f7', border:'1px solid #e8e4dc', borderRadius:10, padding:'8px 13px', fontSize:13, outline:'none', color:'#1a1a1a', fontFamily:"'DM Sans',sans-serif" }}>
+          <option value="all">Всі категорії</option>
+          {[...CATEGORIES.income,...CATEGORIES.expense].map(c=>(
+            <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+          ))}
+        </select>
+        {(filter.type!=='all'||filter.category!=='all'||filter.search) && (
+          <button onClick={()=>setFilter({type:'all',category:'all',search:''})}
+            style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, padding:'8px 13px', fontSize:12, color:'#dc2626', cursor:'pointer', fontWeight:600 }}>
+            ✕ Скинути
+          </button>
+        )}
+      </div>
+      <SectionTitle>Операції ({filtered.length} з {data.transactions.length})</SectionTitle>
 
       {sorted.map(t => {
         const cat = allCats.find(c => c.id === t.category)

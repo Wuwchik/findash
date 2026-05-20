@@ -7,25 +7,77 @@ import Returns from './components/Returns'
 import Import from './components/Import'
 import Calendar from './components/Calendar'
 import Analytics from './components/Analytics'
+import Archive from './components/Archive'
 
 const TABS = [
-  { id: 'dashboard', label: '📊 Дашборд' },
-  { id: 'calendar',  label: '📅 Календар' },
+  { id: 'dashboard',    label: '📊 Дашборд' },
+  { id: 'calendar',     label: '📅 Календар' },
   { id: 'transactions', label: '💳 Операції' },
-  { id: 'debtors',   label: '📥 Борги' },
-  { id: 'returns',   label: '🔄 Повернення' },
-  { id: 'import',    label: '⬆ Імпорт' },
-  { id: 'analytics', label: '📈 Аналітика' },
+  { id: 'debtors',      label: '📥 Борги' },
+  { id: 'returns',      label: '🔄 Повернення' },
+  { id: 'analytics',    label: '📈 Аналітика' },
+  { id: 'archive',      label: '🗂 Архів' },
+  { id: 'import',       label: '⬆ Імпорт' },
 ]
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null
+  return Math.ceil((new Date(dateStr) - new Date(new Date().toISOString().split('T')[0])) / 86400000)
+}
+
+function formatDate(date) {
+  return new Intl.DateTimeFormat('uk', { weekday:'long', day:'numeric', month:'long', year:'numeric' }).format(date)
+}
 
 export default function App() {
   const [data, setData] = useState(() => loadData() || defaultData())
   const [tab, setTab] = useState('dashboard')
+  const [currentDate, setCurrentDate] = useState(new Date())
+
+  // Update date every minute
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDate(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Auto-save daily snapshot at midnight
+  useEffect(() => {
+    const now = new Date()
+    const midnight = new Date(now)
+    midnight.setHours(24, 0, 0, 0)
+    const msUntilMidnight = midnight - now
+    const timer = setTimeout(() => {
+      saveDailySnapshot(data)
+    }, msUntilMidnight)
+    return () => clearTimeout(timer)
+  }, [data])
 
   const save = useCallback((next) => {
     setData(next)
     saveData(next)
   }, [])
+
+  const saveDailySnapshot = (currentData) => {
+    const dateKey = new Date().toISOString().split('T')[0]
+    const snapshots = JSON.parse(localStorage.getItem('findash_snapshots') || '{}')
+    const totalIncome = currentData.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)
+    const totalExpBiz = currentData.transactions.filter(t=>t.type==='expense'&&t.category!=='personal').reduce((s,t)=>s+t.amount,0)
+    const totalPersonal = currentData.transactions.filter(t=>t.category==='personal').reduce((s,t)=>s+t.amount,0)
+    const totalRet = currentData.returns.filter(r=>r.paid).reduce((s,r)=>s+r.amount,0)
+    snapshots[dateKey] = {
+      date: dateKey,
+      balance: currentData.startBalance + totalIncome - totalExpBiz - totalPersonal - totalRet,
+      income: totalIncome,
+      expense: totalExpBiz,
+      personal: totalPersonal,
+      netProfit: totalIncome - totalExpBiz - totalRet,
+    }
+    localStorage.setItem('findash_snapshots', JSON.stringify(snapshots))
+  }
+
+  const saveSnapshotNow = () => {
+    saveDailySnapshot(data)
+  }
 
   const overdueCount =
     data.debtors.filter(d => !d.paid && d.due && daysUntil(d.due) < 0).length +
@@ -48,12 +100,12 @@ export default function App() {
         zIndex: 100,
         boxShadow: '0 1px 12px rgba(0,0,0,.06)'
       }}>
-        <div style={{ padding: '14px 0' }}>
+        <div style={{ padding: '12px 0' }}>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 800, color: '#1a1a1a', letterSpacing: -.3 }}>
             🏨 FinDash
           </div>
-          <div style={{ fontSize: 10, color: '#b0a898', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-            Готельний бізнес · Фінансовий облік
+          <div style={{ fontSize: 11, color: '#2c5f2e', fontWeight: 600, textTransform: 'capitalize', marginTop: 1 }}>
+            {formatDate(currentDate)}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', padding: '8px 0' }}>
@@ -77,19 +129,15 @@ export default function App() {
       </nav>
 
       <div style={{ maxWidth: 1140, margin: '0 auto', padding: '28px 16px' }}>
-        {tab === 'dashboard'     && <Dashboard    data={data} save={save} />}
-        {tab === 'calendar'      && <Calendar     data={data} />}
-        {tab === 'transactions'  && <Transactions data={data} save={save} />}
-        {tab === 'debtors'       && <Debtors      data={data} save={save} />}
-        {tab === 'returns'       && <Returns      data={data} save={save} />}
-        {tab === 'import'        && <Import       data={data} save={save} />}
-        {tab === 'analytics'     && <Analytics    data={data} />}
+        {tab === 'dashboard'    && <Dashboard    data={data} save={save} onSnapshot={saveSnapshotNow} />}
+        {tab === 'calendar'     && <Calendar     data={data} />}
+        {tab === 'transactions' && <Transactions data={data} save={save} />}
+        {tab === 'debtors'      && <Debtors      data={data} save={save} />}
+        {tab === 'returns'      && <Returns      data={data} save={save} />}
+        {tab === 'analytics'    && <Analytics    data={data} />}
+        {tab === 'archive'      && <Archive      data={data} />}
+        {tab === 'import'       && <Import       data={data} save={save} />}
       </div>
     </div>
   )
-}
-
-function daysUntil(dateStr) {
-  if (!dateStr) return null
-  return Math.ceil((new Date(dateStr) - new Date(new Date().toISOString().split('T')[0])) / 86400000)
 }
