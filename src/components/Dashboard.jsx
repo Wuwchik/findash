@@ -303,14 +303,14 @@ export default function Dashboard({ data, save }) {
               <div style={{ background:'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)', border:'1px solid #86efac', borderRadius:16, padding:'22px 22px', flex:1, boxShadow:'0 2px 8px rgba(44,95,46,.08)' }}>
                 <div style={{ fontSize:10, color:'#16a34a', fontWeight:700, letterSpacing:1.5, textTransform:'uppercase', marginBottom:8 }}>💵 Зароблено чистими (всього)</div>
                 <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:800, color:'#15803d', letterSpacing:-.5 }}>
-                  {fmt(netProfit + totalPersonal)}
+                  {fmt(netProfit)}
                 </div>
                 <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:6 }}>
                   <span style={{ background:'#bbf7d0', borderRadius:5, padding:'3px 8px', color:'#15803d', fontWeight:600, fontSize:12, display:'inline-block' }}>
-                    Прибуток бізнесу: {fmt(netProfit)}
+                    Доходи: {fmt(totalIncome)}
                   </span>
-                  <span style={{ background:'#bae6fd', borderRadius:5, padding:'3px 8px', color:'#0369a1', fontWeight:600, fontSize:12, display:'inline-block' }}>
-                    + Вивів собі: {fmt(totalPersonal)}
+                  <span style={{ background:'#fecaca', borderRadius:5, padding:'3px 8px', color:'#dc2626', fontWeight:600, fontSize:12, display:'inline-block' }}>
+                    - Витрати: {fmt(totalExpBiz + totalReturns)}
                   </span>
                 </div>
               </div>
