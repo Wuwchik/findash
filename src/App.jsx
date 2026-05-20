@@ -30,9 +30,18 @@ function formatDate(date) {
 }
 
 export default function App() {
-  const [data, setData] = useState(() => loadData() || defaultData())
+  const [data, setData] = useState(defaultData)
+  const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('dashboard')
   const [currentDate, setCurrentDate] = useState(new Date())
+
+  // Load data from Supabase on mount
+  useEffect(() => {
+    loadData().then(loaded => {
+      if (loaded) setData(loaded)
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
 
   // Update date every minute
   useEffect(() => {
@@ -82,6 +91,13 @@ export default function App() {
   const overdueCount =
     data.debtors.filter(d => !d.paid && d.due && daysUntil(d.due) < 0).length +
     data.creditors.filter(c => !c.paid && c.due && daysUntil(c.due) < 0).length
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', background:'#f5f3ef', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
+      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:24, fontWeight:700, color:'#2c5f2e' }}>🏨 FinDash</div>
+      <div style={{ fontSize:14, color:'#b0a898' }}>Завантаження даних...</div>
+    </div>
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f3ef' }}>
