@@ -35,14 +35,14 @@ function GoalRing({ label, current, goal, color, yearMode }) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           {yearMode ? (
             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 12, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.2 }}>
-              {fmtK(current)}<br /><span style={{ fontSize: 9, color: '#b0a898' }}>₴</span>
+              {fmtK(Math.round(current))}<br /><span style={{ fontSize: 9, color: '#b0a898' }}>₴</span>
             </div>
           ) : (
             <>
               <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 800, color: isOver ? '#16a34a' : '#1a1a1a', lineHeight: 1 }}>
                 {isOver ? '✓' : `${Math.round(pct)}%`}
               </div>
-              <div style={{ fontSize: 10, color: '#b0a898', marginTop: 2 }}>{fmtK(current)}</div>
+              <div style={{ fontSize: 10, color: '#b0a898', marginTop: 2 }}>{fmtK(Math.round(current))}</div>
             </>
           )}
         </div>
@@ -148,7 +148,7 @@ export default function Dashboard({ data, save }) {
   const yearIncome    = txInc.filter(t => inPeriod(t.date, yearStart)).reduce((s,t)=>s+t.amount,0)
   const yearExpense   = txExp.filter(t => inPeriod(t.date, yearStart) && t.category !== 'personal').reduce((s,t)=>s+t.amount,0)
   const yearPersonal  = txExp.filter(t => inPeriod(t.date, yearStart) && t.category === 'personal').reduce((s,t)=>s+t.amount,0)
-  const yearNetProfit = yearIncome - yearExpense - totalReturns + yearPersonal
+  const yearNetProfit = Math.round(yearIncome - yearExpense - totalReturns + yearPersonal)
 
   const pendingDebt   = data.debtors.filter(d=>!d.paid).reduce((s,d)=>s+d.amount,0)
   const pendingCred   = data.creditors.filter(c=>!c.paid).reduce((s,c)=>s+c.amount,0)
