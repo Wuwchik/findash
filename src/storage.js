@@ -51,3 +51,60 @@ export async function saveData(data) {
     try { localStorage.setItem('findash_v1', JSON.stringify(data)) } catch {}
   }
 }
+
+// ═══════════════════════════════════════════════════════════
+// ДОДАТИ ЦІ ФУНКЦІЇ В КІНЕЦЬ ФАЙЛУ src/storage.js
+// ═══════════════════════════════════════════════════════════
+
+// Завантажити банківські транзакції
+export async function loadBankTransactions() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/bank_transactions?select=*&order=date.desc`,
+      { headers: HEADERS }
+    )
+    const rows = await res.json()
+    return Array.isArray(rows) ? rows : []
+  } catch (e) {
+    console.error('Load bank error:', e)
+    return []
+  }
+}
+
+// Оновити категорію та готель для банківської транзакції
+export async function updateBankTransaction(id, updates) {
+  try {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/bank_transactions?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        headers: HEADERS,
+        body: JSON.stringify(updates)
+      }
+    )
+    return true
+  } catch (e) {
+    console.error('Update bank error:', e)
+    return false
+  }
+}
+
+// Викликати синхронізацію з ПриватБанком вручну
+export async function syncPrivatBank() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/dynamic-handler`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+    return await res.json()
+  } catch (e) {
+    console.error('Sync error:', e)
+    return { success: false, error: String(e) }
+  }
+}
