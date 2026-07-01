@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { loadData, saveData, defaultData } from './storage'
+import { loadData, saveData, defaultData, loadBankTransactions } from './storage'
 import Dashboard from './components/Dashboard'
 import Transactions from './components/Transactions'
 import Debtors from './components/Debtors'
@@ -39,8 +39,29 @@ export default function App() {
 
   // Load data from Supabase on mount
   useEffect(() => {
-    loadData().then(loaded => {
-      if (loaded) setData(loaded)
+    Promise.all([
+      loadData(),
+      loadBankTransactions()
+    ]).then(([loaded, bankTxns]) => {
+      const base = loaded || defaultData()
+      const bankAsTransactions = (bankTxns || [])
+        .filter(t => t.category)
+        .map(t => ({
+          id: 'bank_' + t.id,
+          type: t.type,
+          category: t.category,
+          amount: Number(t.amount),
+          date: t.date ? t.date.split('T')[0] : '',
+          counterparty: t.hotel || t.bank_counterparty || '',
+          note: t.description || '',
+          fromBank: true
+        }))
+      const manualIds = new Set((base.transactions || []).map(t => t.id))
+      const merged = [
+        ...(base.transactions || []),
+        ...bankAsTransactions.filter(t => !manualIds.has(t.id))
+      ]
+      setData({ ...base, transactions: merged })
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])
@@ -65,7 +86,11 @@ export default function App() {
 
   const save = useCallback((next) => {
     setData(next)
-    saveData(next)
+    const toSave = {
+      ...next,
+      transactions: (next.transactions || []).filter(t => !t.fromBank)
+    }
+    saveData(toSave)
   }, [])
 
   const saveDailySnapshot = (currentData) => {
