@@ -145,9 +145,15 @@ export default function App() {
       }}>
         <div style={{ padding: '12px 0' }}>
           <div style={{ fontFamily: "'Spectral', serif", fontSize: 22, fontWeight: 800, color: '#1a1a1a', letterSpacing: -.3 }}>
-            🏨 FinDash
+            🏨 A.U.R.A
           </div>
-          <div style={{ fontSize: 11, color: '#2c5f2e', fontWeight: 600, textTransform: 'capitalize', marginTop: 1 }}>
+          <div style={{ fontFamily: "'Spectral', serif", fontSize: 11, color: '#78716c', fontWeight: 500, marginTop: 1 }}>
+            Autonomous Universal Revenue Analyst
+          </div>
+          <div style={{ fontSize: 11, color: '#1a1a1a', fontWeight: 600, marginTop: 2 }}>
+            Фінансовий аналітик доходів
+          </div>
+          <div style={{ fontSize: 11, color: '#2c5f2e', fontWeight: 600, textTransform: 'capitalize', marginTop: 2 }}>
             {formatDate(currentDate)}
           </div>
         </div>
