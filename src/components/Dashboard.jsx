@@ -2,52 +2,67 @@ import { useState } from 'react'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import { fmt, fmtK, todayStr, daysUntil, CATEGORIES, CAT_COLORS, Card, SectionTitle, StatCard, Btn, Input } from '../ui.jsx'
 
+// Анімація обертального променя
+if (typeof document !== 'undefined' && !document.getElementById('aura-spin-style')) {
+  const s = document.createElement('style')
+  s.id = 'aura-spin-style'
+  s.textContent = '@keyframes auraSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'
+  document.head.appendChild(s)
+}
 // ── Goal Ring ─────────────────────────────────────────────────
 function GoalRing({ label, current, goal, color, yearMode }) {
   const pct = yearMode ? 0 : Math.min(100, goal > 0 ? (current / goal) * 100 : 0)
-  const r = 42, sw = 7
+  const r = 54, sw = 12
   const circ = 2 * Math.PI * r
-  const dash = (pct / 100) * circ
   const isOver = !yearMode && current >= goal
+  const strokeColor = isOver ? '#16a34a' : color
+  const offset = circ - (pct / 100) * circ
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 100 }}>
-      <div style={{ position: 'relative', width: 96, height: 96 }}>
-        <svg width={96} height={96} style={{ transform: 'rotate(-90deg)' }}>
-          <circle cx={48} cy={48} r={r} fill="none" stroke="#f0ede8" strokeWidth={sw} />
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 120 }}>
+      <div style={{ position: 'relative', width: 130, height: 130 }}>
+        <svg width={130} height={130} style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx={65} cy={65} r={r} fill="none" stroke="#f0ede8" strokeWidth={sw} />
           {!yearMode && (
-            <circle cx={48} cy={48} r={r} fill="none"
-              stroke={isOver ? '#16a34a' : color}
+            <circle cx={65} cy={65} r={r} fill="none"
+              stroke={strokeColor}
               strokeWidth={sw}
-              strokeDasharray={`${dash} ${circ}`}
+              strokeDasharray={circ}
+              strokeDashoffset={offset}
               strokeLinecap="round"
-              style={{ transition: 'stroke-dasharray .7s ease' }}
+              style={{ transition: 'stroke-dashoffset 1.6s cubic-bezier(.4,0,.2,1)' }}
             />
           )}
           {yearMode && (
-            <circle cx={48} cy={48} r={r} fill="none"
+            <circle cx={65} cy={65} r={r} fill="none"
               stroke={color} strokeWidth={sw}
               strokeDasharray={`${circ * 0.12} ${circ}`}
-              strokeLinecap="round" opacity={0.35}
+              strokeLinecap="round" opacity={0.4}
             />
           )}
+          <circle cx={65} cy={65} r={r} fill="none"
+            stroke={strokeColor} strokeWidth={sw} strokeLinecap="round"
+            strokeDasharray={`${circ * 0.07} ${circ}`}
+            opacity={0.55}
+            style={{ transformOrigin: '65px 65px', animation: 'auraSpin 3s linear infinite' }}
+          />
         </svg>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           {yearMode ? (
-            <div style={{ fontFamily: "'Spectral', serif", fontSize: 12, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.2 }}>
-              {fmtK(Math.round(current))}<br /><span style={{ fontSize: 9, color: '#b0a898' }}>₴</span>
+            <div style={{ fontFamily: "'Spectral', serif", fontSize: 16, fontWeight: 800, color, textAlign: 'center', lineHeight: 1.2 }}>
+              {fmtK(Math.round(current))}<br /><span style={{ fontSize: 10, color: '#b0a898' }}>₴</span>
             </div>
           ) : (
             <>
-              <div style={{ fontFamily: "'Spectral', serif", fontSize: 16, fontWeight: 800, color: isOver ? '#16a34a' : '#1a1a1a', lineHeight: 1 }}>
+              <div style={{ fontFamily: "'Spectral', serif", fontSize: 24, fontWeight: 800, color: isOver ? '#16a34a' : '#1a1a1a', lineHeight: 1 }}>
                 {isOver ? '✓' : `${Math.round(pct)}%`}
               </div>
-              <div style={{ fontSize: 10, color: '#b0a898', marginTop: 2 }}>{fmtK(Math.round(current))}</div>
+              <div style={{ fontSize: 11, color: '#b0a898', marginTop: 2, fontWeight: 600 }}>{fmtK(Math.round(current))}</div>
             </>
           )}
         </div>
       </div>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#78716c', letterSpacing: .8, textTransform: 'uppercase', textAlign: 'center' }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#78716c', letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center' }}>{label}</div>
       {!yearMode && <div style={{ fontSize: 10, color: '#d1cdc7' }}>план {fmtK(goal)}</div>}
     </div>
   )
@@ -72,11 +87,11 @@ function GoalsBanner({ data, metrics, onSave }) {
 
       {/* Rings */}
       <div style={{ display: 'flex', gap: 12, justifyContent: 'space-around', flexWrap: 'wrap', marginBottom: 20 }}>
-        <GoalRing label="День"    current={metrics.todayIncome} goal={g.day}   color="#2c5f2e" />
-        <GoalRing label="Тиждень" current={metrics.weekIncome}  goal={g.week}  color="#7c3aed" />
-        <GoalRing label="Місяць"  current={metrics.monthIncome} goal={g.month} color="#ca8a04" />
+        <GoalRing label="День"    current={metrics.todayIncome} goal={g.day}   color="#0247fe" />
+        <GoalRing label="Тиждень" current={metrics.weekIncome}  goal={g.week}  color="#0090ff" />
+        <GoalRing label="Місяць"  current={metrics.monthIncome} goal={g.month} color="#00c4ff" />
         <div style={{ width: 1, background: '#f0ede8', margin: '8px 4px' }} />
-        <GoalRing label="Рік · Прибуток" current={metrics.yearNetProfit} goal={0} color="#16a34a" yearMode />
+        <GoalRing label="Рік · Прибуток" current={metrics.yearNetProfit} goal={0} color="#00ff00" yearMode />
       </div>
 
       {/* Hotel / Tourism / Personal strip */}
@@ -86,9 +101,13 @@ function GoalsBanner({ data, metrics, onSave }) {
           { icon: '🚌', label: 'Туризм · місяць',           value: metrics.mTourismIncome, sub: `витрати ${fmt(metrics.mTourismExp)} · прибуток ${fmt(metrics.mTourismIncome - metrics.mTourismExp)}`, color: '#4a7c59' },
           { icon: '👤', label: 'Вивів собі · місяць',       value: metrics.mPersonal, sub: 'з чистого прибутку', color: '#0891b2' },
         ].map(item => (
-          <div key={item.label} style={{ background: '#faf9f7', borderRadius: 12, padding: '12px 14px', borderLeft: `3px solid ${item.color}`, border: '1px solid #e8e4dc' }}>
-            <div style={{ fontSize: 10, color: '#b0a898', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{item.icon} {item.label}</div>
-            <div style={{ fontFamily: "'Spectral', serif", fontSize: 18, fontWeight: 700, color: item.color }}>{fmt(item.value)}</div>
+          <div key={item.label}
+            style={{ background: '#fff', borderRadius: 14, padding: '16px 18px', borderLeft: `3px solid ${item.color}`, border: '1px solid #e8e4dc', boxShadow: '0 0 18px rgba(0,0,0,.12)', transition: 'transform .22s cubic-bezier(.4,0,.2,1), box-shadow .22s cubic-bezier(.4,0,.2,1)', cursor: 'default' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px) scale(1.03)'; e.currentTarget.style.boxShadow = '0 0 32px rgba(0,0,0,.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 0 18px rgba(0,0,0,.12)' }}
+          >
+            <div style={{ fontSize: 10, color: '#b0a898', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 5 }}>{item.icon} {item.label}</div>
+            <div style={{ fontFamily: "'Spectral', serif", fontSize: 22, fontWeight: 800, color: item.color }}>{fmt(item.value)}</div>
             <div style={{ fontSize: 11, color: '#b0a898', marginTop: 3 }}>{item.sub}</div>
           </div>
         ))}
