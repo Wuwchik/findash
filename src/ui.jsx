@@ -171,7 +171,7 @@ export function Modal({ title, onClose, children }) {
         boxShadow: '0 20px 60px rgba(0,0,0,.15)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700, color: '#1a1a1a' }}>{title}</span>
+          <span style={{ fontFamily: "'Spectral', serif", fontSize: 19, fontWeight: 700, color: '#1a1a1a' }}>{title}</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#b0a898', fontSize: 24, cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>
         {children}
@@ -196,7 +196,7 @@ export function StatCard({ icon, label, value, sub, color = '#2c5f2e', alert }) 
       <div style={{ position: 'absolute', top: 0, right: 0, width: 64, height: 64, background: `${color}0d`, borderRadius: '0 16px 0 64px' }} />
       <div style={{ fontSize: 20, marginBottom: 6 }}>{icon}</div>
       <div style={{ fontSize: 10, color: '#b0a898', fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color, fontFamily: "'Playfair Display', serif" }}>{value}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color, fontFamily: "'Spectral', serif" }}>{value}</div>
       {sub   && <div style={{ fontSize: 11, color: '#b0a898', marginTop: 4 }}>{sub}</div>}
       {alert && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4, fontWeight: 700 }}>⚠ {alert}</div>}
     </div>

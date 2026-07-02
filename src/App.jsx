@@ -121,7 +121,7 @@ export default function App() {
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:'#f5f3ef', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
-      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:24, fontWeight:700, color:'#2c5f2e' }}>🏨 FinDash</div>
+      <div style={{ fontFamily:"'Spectral',serif", fontSize:24, fontWeight:700, color:'#2c5f2e' }}>🏨 FinDash</div>
       <div style={{ fontSize:14, color:'#b0a898' }}>Завантаження даних...</div>
     </div>
   )
@@ -144,7 +144,7 @@ export default function App() {
         boxShadow: '0 1px 12px rgba(0,0,0,.06)'
       }}>
         <div style={{ padding: '12px 0' }}>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 800, color: '#1a1a1a', letterSpacing: -.3 }}>
+          <div style={{ fontFamily: "'Spectral', serif", fontSize: 22, fontWeight: 800, color: '#1a1a1a', letterSpacing: -.3 }}>
             🏨 FinDash
           </div>
           <div style={{ fontSize: 11, color: '#2c5f2e', fontWeight: 600, textTransform: 'capitalize', marginTop: 1 }}>

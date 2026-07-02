@@ -34,12 +34,12 @@ function GoalRing({ label, current, goal, color, yearMode }) {
         </svg>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           {yearMode ? (
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 12, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.2 }}>
+            <div style={{ fontFamily: "'Spectral', serif", fontSize: 12, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.2 }}>
               {fmtK(Math.round(current))}<br /><span style={{ fontSize: 9, color: '#b0a898' }}>₴</span>
             </div>
           ) : (
             <>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 800, color: isOver ? '#16a34a' : '#1a1a1a', lineHeight: 1 }}>
+              <div style={{ fontFamily: "'Spectral', serif", fontSize: 16, fontWeight: 800, color: isOver ? '#16a34a' : '#1a1a1a', lineHeight: 1 }}>
                 {isOver ? '✓' : `${Math.round(pct)}%`}
               </div>
               <div style={{ fontSize: 10, color: '#b0a898', marginTop: 2 }}>{fmtK(Math.round(current))}</div>
@@ -62,7 +62,7 @@ function GoalsBanner({ data, metrics, onSave }) {
   return (
     <Card style={{ marginBottom: 20, background: 'linear-gradient(135deg,#fff 0%,#faf9f7 100%)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>
+        <div style={{ fontFamily: "'Spectral', serif", fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>
           🎯 Виконання плану
         </div>
         <Btn variant="ghost" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => { setDraft(data.goals); setEditing(true) }}>
@@ -88,7 +88,7 @@ function GoalsBanner({ data, metrics, onSave }) {
         ].map(item => (
           <div key={item.label} style={{ background: '#faf9f7', borderRadius: 12, padding: '12px 14px', borderLeft: `3px solid ${item.color}`, border: '1px solid #e8e4dc' }}>
             <div style={{ fontSize: 10, color: '#b0a898', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{item.icon} {item.label}</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: item.color }}>{fmt(item.value)}</div>
+            <div style={{ fontFamily: "'Spectral', serif", fontSize: 18, fontWeight: 700, color: item.color }}>{fmt(item.value)}</div>
             <div style={{ fontSize: 11, color: '#b0a898', marginTop: 3 }}>{item.sub}</div>
           </div>
         ))}
@@ -98,7 +98,7 @@ function GoalsBanner({ data, metrics, onSave }) {
       {editing && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
           <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: 'min(380px,95vw)', boxShadow: '0 20px 60px rgba(0,0,0,.15)' }}>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700, marginBottom: 22 }}>🎯 Змінити плани</div>
+            <div style={{ fontFamily: "'Spectral', serif", fontSize: 19, fontWeight: 700, marginBottom: 22 }}>🎯 Змінити плани</div>
             {[['day','День (₴)'],['week','Тиждень (₴)'],['month','Місяць (₴)']].map(([k, l]) => (
               <Input key={k} label={l} type="number" value={draft[k]}
                 onChange={e => setDraft(p => ({ ...p, [k]: parseFloat(e.target.value) || 0 }))} />
@@ -283,7 +283,7 @@ export default function Dashboard({ data, save }) {
                     <div style={{ fontSize:12, fontWeight:600, color:'#1a1a1a', textTransform:'capitalize' }}>{row.month}</div>
                     <div style={{ fontSize:12, color:'#16a34a', fontWeight:600 }}>+{(income/1000).toFixed(1)}к</div>
                     <div style={{ fontSize:12, color:'#dc2626' }}>-{(row.expense/1000).toFixed(1)}к</div>
-                    <div style={{ fontSize:13, fontWeight:800, color:row.profit>=0?'#2c5f2e':'#dc2626', fontFamily:"'Playfair Display',serif" }}>
+                    <div style={{ fontSize:13, fontWeight:800, color:row.profit>=0?'#2c5f2e':'#dc2626', fontFamily:"'Spectral',serif" }}>
                       {row.profit>=0?'+':''}{(row.profit/1000).toFixed(1)}к
                     </div>
                   </div>
@@ -293,7 +293,7 @@ export default function Dashboard({ data, save }) {
                 <div style={{ fontSize:11, fontWeight:700, color:'#78716c' }}>Разом</div>
                 <div style={{ fontSize:12, color:'#16a34a', fontWeight:700 }}>+{(chartData.reduce((s,d)=>s+d.hotel+d.tourism,0)/1000).toFixed(1)}к</div>
                 <div style={{ fontSize:12, color:'#dc2626', fontWeight:700 }}>-{(chartData.reduce((s,d)=>s+d.expense,0)/1000).toFixed(1)}к</div>
-                <div style={{ fontSize:13, fontWeight:800, color:'#2c5f2e', fontFamily:"'Playfair Display',serif" }}>
+                <div style={{ fontSize:13, fontWeight:800, color:'#2c5f2e', fontFamily:"'Spectral',serif" }}>
                   +{(chartData.reduce((s,d)=>s+d.profit,0)/1000).toFixed(1)}к
                 </div>
               </div>
@@ -302,7 +302,7 @@ export default function Dashboard({ data, save }) {
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               <div style={{ background:'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)', border:'1px solid #86efac', borderRadius:16, padding:'22px 22px', flex:1, boxShadow:'0 2px 8px rgba(44,95,46,.08)' }}>
                 <div style={{ fontSize:10, color:'#16a34a', fontWeight:700, letterSpacing:1.5, textTransform:'uppercase', marginBottom:8 }}>💵 Зароблено чистими (всього)</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:800, color:'#15803d', letterSpacing:-.5 }}>
+                <div style={{ fontFamily:"'Spectral',serif", fontSize:28, fontWeight:800, color:'#15803d', letterSpacing:-.5 }}>
                   {fmt(netProfit)}
                 </div>
                 <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:6 }}>
@@ -316,7 +316,7 @@ export default function Dashboard({ data, save }) {
               </div>
               <div style={{ background:'linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)', border:'1px solid #93c5fd', borderRadius:16, padding:'18px 22px', boxShadow:'0 2px 8px rgba(8,145,178,.06)' }}>
                 <div style={{ fontSize:10, color:'#0891b2', fontWeight:700, letterSpacing:1.5, textTransform:'uppercase', marginBottom:6 }}>🏦 Залишок в бізнесі</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:800, color:'#1d4ed8' }}>{fmt(balance)}</div>
+                <div style={{ fontFamily:"'Spectral',serif", fontSize:22, fontWeight:800, color:'#1d4ed8' }}>{fmt(balance)}</div>
                 <div style={{ fontSize:11, color:'#93c5fd', marginTop:4 }}>на рахунку зараз</div>
               </div>
             </div>
@@ -373,7 +373,7 @@ export default function Dashboard({ data, save }) {
       ) : (
         <Card style={{ textAlign:'center', padding:56 }}>
           <div style={{ fontSize:44, marginBottom:14 }}>📊</div>
-          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:'#78716c', marginBottom:8 }}>
+          <div style={{ fontFamily:"'Spectral',serif", fontSize:18, fontWeight:700, color:'#78716c', marginBottom:8 }}>
             Графіки з'являться після внесення даних
           </div>
           <div style={{ fontSize:13, color:'#b0a898' }}>Перейдіть у «Операції» або «⬆ Імпорт»</div>
