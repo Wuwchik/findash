@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
-import { fmt, fmtK, todayStr, daysUntil, CATEGORIES, CAT_COLORS, Card, SectionTitle, StatCard, Btn, Input } from '../ui.jsx'
+import { fmt, fmtK, daysUntil, CATEGORIES, CAT_COLORS, Card, SectionTitle, StatCard, Btn, Input } from '../ui.jsx'
 
 // Анімація обертального променя
 if (typeof document !== 'undefined' && !document.getElementById('aura-spin-style')) {
@@ -85,13 +85,13 @@ function GoalsBanner({ data, metrics, onSave }) {
         </Btn>
       </div>
 
-      {/* Rings */}
+      {/* Rings — виручка (всі надходження з банку), не потребує категоризації */}
       <div style={{ display: 'flex', gap: 12, justifyContent: 'space-around', flexWrap: 'wrap', marginBottom: 20 }}>
-        <GoalRing label="День"    current={metrics.todayIncome} goal={g.day}   color="#0247fe" />
-        <GoalRing label="Тиждень" current={metrics.weekIncome}  goal={g.week}  color="#0090ff" />
-        <GoalRing label="Місяць"  current={metrics.monthIncome} goal={g.month} color="#00c4ff" />
+        <GoalRing label="День"    current={metrics.todayRevenue} goal={g.day}   color="#0247fe" />
+        <GoalRing label="Тиждень" current={metrics.weekRevenue}  goal={g.week}  color="#0090ff" />
+        <GoalRing label="Місяць"  current={metrics.monthRevenue} goal={g.month} color="#00c4ff" />
         <div style={{ width: 1, background: '#f0ede8', margin: '8px 4px' }} />
-        <GoalRing label="Рік · Прибуток" current={metrics.yearNetProfit} goal={0} color="#00ff00" yearMode />
+        <GoalRing label="Рік · Виручка" current={metrics.yearRevenue} goal={0} color="#00ff00" yearMode />
       </div>
 
       {/* Hotel / Tourism / Personal strip */}
@@ -133,16 +133,29 @@ function GoalsBanner({ data, metrics, onSave }) {
   )
 }
 
+// Рік для A.U.R.A стартує з травня 2026 — перших даних у банку, а не з календарного січня
+const REVENUE_YEAR_START = new Date(2026, 4, 1)
+
 // ── Dashboard ─────────────────────────────────────────────────
-export default function Dashboard({ data, save }) {
+export default function Dashboard({ data, save, bankTransactions = [] }) {
   const now = new Date()
-  const dayStr = todayStr()
+  const dayStart = new Date(now); dayStart.setHours(0,0,0,0)
   const dayOfWeek = (now.getDay() + 6) % 7
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - dayOfWeek); weekStart.setHours(0,0,0,0)
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const yearStart  = new Date(now.getFullYear(), 0, 1)
 
   const inPeriod = (ds, from) => new Date(ds) >= from
+
+  // Виручка (брудний потік) — усі надходження з банку, без потреби категоризації
+  // Порівнюємо за локальним часом (той самий eталон, що й для тижня/місяця/року),
+  // щоб не втратити транзакції біля півночі через розбіжність UTC/локальний час
+  const bankIncome = bankTransactions.filter(t => t.type === 'income')
+  const inPeriodBank = (t, from) => t.date && new Date(t.date) >= from
+
+  const todayRevenue = bankIncome.filter(t => inPeriodBank(t, dayStart)).reduce((s, t) => s + Number(t.amount), 0)
+  const weekRevenue   = bankIncome.filter(t => inPeriodBank(t, weekStart)).reduce((s, t) => s + Number(t.amount), 0)
+  const monthRevenue  = bankIncome.filter(t => inPeriodBank(t, monthStart)).reduce((s, t) => s + Number(t.amount), 0)
+  const yearRevenue   = bankIncome.filter(t => inPeriodBank(t, REVENUE_YEAR_START)).reduce((s, t) => s + Number(t.amount), 0)
 
   const txInc = data.transactions.filter(t => t.type === 'income')
   const txExp = data.transactions.filter(t => t.type === 'expense')
@@ -154,20 +167,11 @@ export default function Dashboard({ data, save }) {
   const balance      = data.startBalance + totalIncome - totalExpense - totalPersonal - totalReturns
   const netProfit    = totalIncome - totalExpense - totalReturns
 
-  const todayIncome  = txInc.filter(t => t.date === dayStr).reduce((s, t) => s + t.amount, 0)
-  const weekIncome   = txInc.filter(t => inPeriod(t.date, weekStart)).reduce((s, t) => s + t.amount, 0)
-  const monthIncome  = txInc.filter(t => inPeriod(t.date, monthStart)).reduce((s, t) => s + t.amount, 0)
-
   const mHotelIncome  = txInc.filter(t => inPeriod(t.date, monthStart) && t.category !== 'tourism').reduce((s,t)=>s+t.amount,0)
   const mTourismIncome= txInc.filter(t => inPeriod(t.date, monthStart) && t.category === 'tourism').reduce((s,t)=>s+t.amount,0)
   const mHotelExp     = txExp.filter(t => inPeriod(t.date, monthStart) && !['personal','tour_costs'].includes(t.category)).reduce((s,t)=>s+t.amount,0)
   const mTourismExp   = txExp.filter(t => inPeriod(t.date, monthStart) && t.category === 'tour_costs').reduce((s,t)=>s+t.amount,0)
   const mPersonal     = txExp.filter(t => inPeriod(t.date, monthStart) && t.category === 'personal').reduce((s,t)=>s+t.amount,0)
-
-  const yearIncome    = txInc.filter(t => inPeriod(t.date, yearStart)).reduce((s,t)=>s+t.amount,0)
-  const yearExpense   = txExp.filter(t => inPeriod(t.date, yearStart) && t.category !== 'personal').reduce((s,t)=>s+t.amount,0)
-  const yearPersonal  = txExp.filter(t => inPeriod(t.date, yearStart) && t.category === 'personal').reduce((s,t)=>s+t.amount,0)
-  const yearNetProfit = Math.round(yearIncome - yearExpense - totalReturns + yearPersonal)
 
   const pendingDebt   = data.debtors.filter(d=>!d.paid).reduce((s,d)=>s+d.amount,0)
   const pendingCred   = data.creditors.filter(c=>!c.paid).reduce((s,c)=>s+c.amount,0)
@@ -205,7 +209,7 @@ export default function Dashboard({ data, save }) {
     <div>
       <GoalsBanner
         data={data}
-        metrics={{ todayIncome, weekIncome, monthIncome, mHotelIncome, mTourismIncome, mHotelExp, mTourismExp, mPersonal, yearNetProfit }}
+        metrics={{ todayRevenue, weekRevenue, monthRevenue, yearRevenue, mHotelIncome, mTourismIncome, mHotelExp, mTourismExp, mPersonal }}
         onSave={g => save({ ...data, goals: g })}
       />
 

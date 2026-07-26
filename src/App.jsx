@@ -33,6 +33,7 @@ function formatDate(date) {
 
 export default function App() {
   const [data, setData] = useState(defaultData)
+  const [bankTransactions, setBankTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('dashboard')
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -44,6 +45,7 @@ export default function App() {
       loadBankTransactions()
     ]).then(([loaded, bankTxns]) => {
       const base = loaded || defaultData()
+      setBankTransactions(bankTxns || [])
       const bankAsTransactions = (bankTxns || [])
         .filter(t => t.category)
         .map(t => ({
@@ -178,7 +180,7 @@ export default function App() {
       </nav>
 
       <div style={{ maxWidth: 1140, margin: '0 auto', padding: '28px 16px' }}>
-        {tab === 'dashboard'    && <Dashboard    data={data} save={save} onSnapshot={saveSnapshotNow} />}
+        {tab === 'dashboard'    && <Dashboard    data={data} save={save} onSnapshot={saveSnapshotNow} bankTransactions={bankTransactions} />}
         {tab === 'calendar'     && <Calendar     data={data} />}
         {tab === 'transactions' && <Transactions data={data} save={save} />}
         {tab === 'debtors'      && <Debtors      data={data} save={save} />}
