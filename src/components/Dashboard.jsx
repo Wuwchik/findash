@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
-import { fmt, fmtK, daysUntil, CATEGORIES, CAT_COLORS, Card, SectionTitle, StatCard, Btn, Input } from '../ui.jsx'
+import { fmt, fmtK, daysUntil, CATEGORIES, CAT_COLORS, Card, SectionTitle, StatCard, Btn, Input, REVENUE_YEAR_START } from '../ui.jsx'
 
 // Анімація обертального променя
 if (typeof document !== 'undefined' && !document.getElementById('aura-spin-style')) {
@@ -132,9 +132,6 @@ function GoalsBanner({ data, metrics, onSave }) {
     </Card>
   )
 }
-
-// Рік для A.U.R.A стартує з травня 2026 — перших даних у банку, а не з календарного січня
-const REVENUE_YEAR_START = new Date(2026, 4, 1)
 
 // ── Dashboard ─────────────────────────────────────────────────
 export default function Dashboard({ data, save, bankTransactions = [] }) {

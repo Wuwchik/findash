@@ -7,6 +7,9 @@ export const fmtK = n =>
 
 export const todayStr = () => new Date().toISOString().split('T')[0]
 
+// Рік для A.U.R.A стартує з травня 2026 — перших даних у банку, а не з календарного січня
+export const REVENUE_YEAR_START = new Date(2026, 4, 1)
+
 export const daysUntil = dateStr => {
   if (!dateStr) return null
   return Math.ceil((new Date(dateStr) - new Date(todayStr())) / 86400000)

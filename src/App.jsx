@@ -187,7 +187,7 @@ export default function App() {
         {tab === 'returns'      && <Returns      data={data} save={save} />}
         {tab === 'analytics'    && <Analytics    data={data} />}
         {tab === 'bank' && <Bank />}
-        {tab === 'archive'      && <Archive      data={data} />}
+        {tab === 'archive'      && <Archive      data={data} bankTransactions={bankTransactions} />}
         {tab === 'import'       && <Import       data={data} save={save} />}
       </div>
     </div>
