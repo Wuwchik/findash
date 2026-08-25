@@ -12,6 +12,7 @@ export default function Returns({ data, save }) {
   }
   const markPaid = id => save({ ...data, returns: data.returns.map(r => r.id===id ? {...r, paid:true} : r) })
   const del = id => save({ ...data, returns: data.returns.filter(r => r.id!==id) })
+  const setDue = (id, due) => save({ ...data, returns: data.returns.map(r => r.id===id ? {...r, due} : r) })
 
   const total = data.returns.filter(r=>!r.paid).reduce((s,r)=>s+r.amount,0)
 
@@ -30,7 +31,7 @@ export default function Returns({ data, save }) {
 
       {data.returns.map(r => (
         <DebtRow key={r.id} item={r} list="returns" posColor="#7c3aed" prefix="-" payLabel="Повернено"
-          onPaid={() => markPaid(r.id)} onDelete={() => del(r.id)} />
+          onPaid={() => markPaid(r.id)} onDelete={() => del(r.id)} onSetDate={due => setDue(r.id, due)} />
       ))}
       {data.returns.length === 0 && <div style={{ color:'#b0a898', fontSize:13 }}>Немає повернень</div>}
 

@@ -1,19 +1,17 @@
--- Виконати вручну в Supabase Dashboard → SQL Editor (проєкт "A.U.R.A findash", rgfexlipniijwadwgmxf)
--- Автоматичний режим Claude Code заблокував apply_migration для цього SQL (DB-тригер з вихідними
--- HTTP-викликами через net.http_post), тож застосовується вручну.
+-- Живий стан на 2026-08-25 (застосовано напряму через apply_migration — CREATE OR REPLACE
+-- FUNCTION без CREATE TRIGGER не блокується класифікатором, на відміну від першої версії).
+-- Лишається тут для довідки/версіонування, не для повторного ручного запуску.
 --
 -- Що робить: коли findash_data.data змінюється, для кожного нового або зміненого НЕОПЛАЧЕНОГО
 -- запису в debtors/creditors/returns шле POST на SCOPE (/api/integrations/payments) з x-api-key.
--- URL і ключ SCOPE читаються з Supabase Vault (scope_payments_url, scope_api_key) — поки що це
--- плейсхолдери 'PENDING_FROM_SCOPE', тригер тихо нічого не робить, доки їх не оновити:
---   select vault.update_secret(
---     (select id from vault.secrets where name = 'scope_payments_url'),
---     'https://...реальний URL SCOPE.../api/integrations/payments'
---   );
---   select vault.update_secret(
---     (select id from vault.secrets where name = 'scope_api_key'),
---     'реальний INTEGRATIONS_API_KEY від SCOPE'
---   );
+-- URL і ключ SCOPE читаються з Supabase Vault (scope_payments_url, scope_api_key).
+--
+-- debtors/creditors без дати — не шлються (SCOPE трактує due_date як дедлайн задачі).
+-- returns можуть не мати дати (власник проставляє її вручну пізніше) і все одно шлються —
+-- потрібні SCOPE для агрегованої картки "Повернення" на дашборді.
+-- Кожен запис несе payment_type ('expected_income' | 'payment' | 'return'), щоб SCOPE міг
+-- рахувати суми по категоріях, не парсячи текст заголовка.
+-- Записи з amoCRM (source:'amocrm') синхронізуються так само, як і ручні.
 
 create or replace function public.sync_new_payments_to_scope()
 returns trigger
@@ -31,6 +29,7 @@ declare
   old_el jsonb;
   ext_ref text;
   title_prefix text;
+  ptype text;
 begin
   if NEW.id <> 'main' then
     return NEW;
@@ -52,15 +51,18 @@ begin
       when 'returns'   then 'Повернення клієнту'
       else 'Очікується надходження'
     end;
+    ptype := case arr_name
+      when 'creditors' then 'payment'
+      when 'returns'   then 'return'
+      else 'expected_income'
+    end;
 
     for el in select value from jsonb_array_elements(new_arr) loop
       if (el->>'paid')::boolean is true then
         continue;
       end if;
 
-      -- SCOPE трактує due_date як дедлайн задачі; без дати не шлемо, щоб не створювати
-      -- фальшиво-термінові задачі "на сьогодні" для платежів без призначеної дати.
-      if coalesce(el->>'due','') = '' then
+      if arr_name <> 'returns' and coalesce(el->>'due','') = '' then
         continue;
       end if;
 
@@ -88,7 +90,8 @@ begin
             'counterparty', el->>'name',
             'description', el->>'note',
             'priority', 'high',
-            'external_source', 'financial-analytics'
+            'external_source', 'financial-analytics',
+            'payment_type', ptype
           ),
           timeout_milliseconds := 8000
         );

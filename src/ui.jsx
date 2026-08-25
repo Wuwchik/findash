@@ -206,7 +206,7 @@ export function StatCard({ icon, label, value, sub, color = '#2c5f2e', alert }) 
   )
 }
 
-export function DebtRow({ item, list, posColor, prefix, payLabel, onPaid, onDelete }) {
+export function DebtRow({ item, list, posColor, prefix, payLabel, onPaid, onDelete, onSetDate }) {
   const lbl = overdueLabel(item.due)
   return (
     <div style={{
@@ -221,8 +221,23 @@ export function DebtRow({ item, list, posColor, prefix, payLabel, onPaid, onDele
     }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 600, fontSize: 14, color: '#1a1a1a' }}>{item.name}</div>
-        <div style={{ display: 'flex', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
-          {item.due && <div style={{ fontSize: 11, color: lbl?.color || '#78716c', fontWeight: 600 }}>📅 {item.due} · {lbl?.text}</div>}
+        <div style={{ display: 'flex', gap: 10, marginTop: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+          {onSetDate && !item.paid ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="date"
+                value={item.due || ''}
+                onChange={e => onSetDate(e.target.value)}
+                style={{
+                  fontSize: 11, padding: '3px 6px', border: '1px solid #e8e4dc', borderRadius: 6,
+                  color: '#78716c', fontFamily: "'DM Sans', sans-serif", background: '#faf9f7'
+                }}
+              />
+              {item.due && lbl && <span style={{ fontSize: 11, color: lbl.color, fontWeight: 600 }}>{lbl.text}</span>}
+            </div>
+          ) : (
+            item.due && <div style={{ fontSize: 11, color: lbl?.color || '#78716c', fontWeight: 600 }}>📅 {item.due} · {lbl?.text}</div>
+          )}
           {item.note && <div style={{ fontSize: 11, color: '#b0a898' }}>{item.note}</div>}
         </div>
       </div>
