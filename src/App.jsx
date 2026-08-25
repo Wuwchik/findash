@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { loadData, saveData, defaultData, loadBankTransactions } from './storage'
+import { loadData, saveData, defaultData, loadBankTransactions, supabase } from './storage'
 import Dashboard from './components/Dashboard'
 import Transactions from './components/Transactions'
 import Debtors from './components/Debtors'
@@ -9,6 +9,7 @@ import Calendar from './components/Calendar'
 import Analytics from './components/Analytics'
 import Archive from './components/Archive'
 import Bank from './components/Bank'
+import Login from './components/Login'
 
 const TABS = [
   { id: 'dashboard',    label: '📊 Дашборд' },
@@ -37,9 +38,21 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('dashboard')
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [session, setSession] = useState(undefined) // undefined = ще не перевірено
 
-  // Load data from Supabase on mount
+  // Track auth session
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Load data from Supabase once logged in
+  useEffect(() => {
+    if (!session) return
+    setLoading(true)
     Promise.all([
       loadData(),
       loadBankTransactions()
@@ -66,7 +79,7 @@ export default function App() {
       setData({ ...base, transactions: merged })
       setLoading(false)
     }).catch(() => setLoading(false))
-  }, [])
+  }, [session])
 
   // Update date every minute
   useEffect(() => {
@@ -120,6 +133,15 @@ export default function App() {
   const overdueCount =
     data.debtors.filter(d => !d.paid && d.due && daysUntil(d.due) < 0).length +
     data.creditors.filter(c => !c.paid && c.due && daysUntil(c.due) < 0).length
+
+  if (session === undefined) return (
+    <div style={{ minHeight:'100vh', background:'#f5f3ef', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
+      <div style={{ fontFamily:"'Spectral',serif", fontSize:24, fontWeight:700, color:'#2c5f2e' }}>🏨 FinDash</div>
+      <div style={{ fontSize:14, color:'#b0a898' }}>Перевірка сесії...</div>
+    </div>
+  )
+
+  if (session === null) return <Login />
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:'#f5f3ef', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
@@ -176,6 +198,19 @@ export default function App() {
               {t.id === 'debtors' && overdueCount > 0 ? `${t.label} (${overdueCount})` : t.label}
             </button>
           ))}
+          <button onClick={() => supabase.auth.signOut()} style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: "'DM Sans', sans-serif",
+            background: 'transparent',
+            color: '#b0a898',
+          }}>
+            🚪 Вийти
+          </button>
         </div>
       </nav>
 
