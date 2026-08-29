@@ -57,6 +57,27 @@ export default function Archive({ data, bankTransactions = [] }) {
 
   const bankIncome = useMemo(() => bankTransactions.filter(t => t.type === 'income'), [bankTransactions])
 
+  // ── Денна історія (останні 30 днів) ──────────────────────────
+  const dayRows = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const rows = []
+    for (let i = 0; i < 30; i++) {
+      const start = new Date(today); start.setDate(start.getDate() - i)
+      if (start < REVENUE_YEAR_START) break
+      const end = new Date(start); end.setDate(end.getDate() + 1)
+      const revenue = bankIncome
+        .filter(t => { const d = new Date(t.date); return d >= start && d < end })
+        .reduce((s, t) => s + Number(t.amount), 0)
+      rows.push({
+        key: start.toISOString(),
+        label: weekDf.format(start),
+        revenue,
+        isCurrent: i === 0,
+      })
+    }
+    return rows
+  }, [bankIncome])
+
   // ── Тижнева історія (з травня 2026) ──────────────────────────
   const weekRows = useMemo(() => {
     const lastMonday = mondayOf(new Date())
@@ -159,7 +180,8 @@ export default function Archive({ data, bankTransactions = [] }) {
       </div>
 
       {/* Історія виконання плану */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14, marginBottom:14 }}>
+        <PeriodTable title="Дні (30) · виручка vs план" rows={dayRows} goal={data.goals?.day || 0} />
         <PeriodTable title="Тижні · виручка vs план" rows={weekRows} goal={data.goals?.week || 0} />
         <PeriodTable title="Місяці · виручка vs план" rows={monthRows} goal={data.goals?.month || 0} />
       </div>
