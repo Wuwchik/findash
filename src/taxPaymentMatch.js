@@ -28,7 +28,11 @@ export function bankMatchForEvent(period, item, bankTransactions=[], bankLinks={
   const hasExpected = item.amount !== null && item.amount !== undefined && Number.isFinite(expected) && expected > 0
   return {
     included, detected, amount,
-    candidates: candidates.filter(t => !included.some(p => String(p.id)===String(t.id)) && !bankLinks[String(t.id)]),
+    candidates: candidates.filter(t => {
+      const quarter = quarterFromPurpose(t.description || '')
+      return !included.some(p => String(p.id)===String(t.id)) &&
+        !bankLinks[String(t.id)] && !quarter
+    }),
     status: amount <= 0 ? 'unmatched' : hasExpected ? (amount + 0.009 >= expected ? 'paid' : 'partial') : 'amount_unknown'
   }
 }
