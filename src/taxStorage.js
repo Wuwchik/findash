@@ -5,7 +5,7 @@ export async function loadTaxSettings(userId) {
   if (!userId) throw new Error('Авторизацію не знайдено')
   const { data, error } = await supabase
     .from('aura_tax_settings')
-    .select('tax_regime, esv_exempt, income_overrides, manual_status')
+    .select('tax_regime, esv_exempt, income_overrides, manual_status, bank_links, notifications_enabled')
     .eq('user_id', userId)
     .maybeSingle()
   if (error) throw error
@@ -14,6 +14,8 @@ export async function loadTaxSettings(userId) {
     esvExempt: data.esv_exempt,
     incomeOverrides: data.income_overrides || {},
     manualStatus: data.manual_status || {},
+    bankLinks: data.bank_links || {},
+    notificationsEnabled: !!data.notifications_enabled,
   } : {}
 }
 
@@ -25,6 +27,8 @@ export async function saveTaxSettings(userId, settings) {
     esv_exempt: !!settings.esvExempt,
     income_overrides: settings.incomeOverrides || {},
     manual_status: settings.manualStatus || {},
+    bank_links: settings.bankLinks || {},
+    notifications_enabled: !!settings.notificationsEnabled,
     updated_at: new Date().toISOString(),
   }, { onConflict:'user_id' })
   if (error) throw error
