@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { loadTaxSettings } from '../taxStorage.js'
 import { taxPeriods, quarterIncome, taxEvents, TAX_LABELS, daysUntilDate, formatUAH } from '../taxes.js'
 import { bankMatchForEvent } from '../taxPaymentMatch.js'
@@ -24,8 +24,6 @@ function sendNotification(title, body, key, onOpenTaxes) {
 
 export default function TaxNotificationMonitor({ session, bankTransactions=[], transactions=[], onOpenTaxes }) {
   const [settings, setSettings] = useState(null)
-  const loadedRef = useRef(false)
-  const ref = useRef(null)
 
   useEffect(() => {
     if (!session?.user?.id) return
