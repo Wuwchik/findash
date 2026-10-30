@@ -7,8 +7,8 @@ export function quarterFromPurpose(description) {
   const years = [...value.matchAll(/20\d{2}/g)].map(x => Number(x[0]))
   if (!years.length || new Set(years).size !== 1) return null
   const numerals = { 'i':1, 'ii':2, 'iii':3, 'iv':4 }
-  const normalized = value.replace(/\bq([1-4])\b/g,'$1 кв')
-  const m = normalized.match(/(?:^|\s)([1-4]|iv|iii|ii|i)\s*(?:[-–]?\s*)?(?:кв(?:артал)?\.?|квартал(?:у|і|а)?)\b/i) ||
+  const normalized = value.replace(/(?:^|\s)q([1-4])(?=$|\s)/g,' $1 кв ')
+  const m = normalized.match(/(?:^|\s)([1-4]|iv|iii|ii|i)\s*(?:[-–]?\s*)?(?:кв(?:артал)?\.?|квартал(?:у|і|а)?)(?=$|[\s.,;:()])/i) ||
     normalized.match(/(?:кв(?:артал)?\.?|квартал(?:у|і|а)?)\s*([1-4]|iv|iii|ii|i)(?:\s|$)/i)
   if (!m) return null
   const quarter = numerals[m[1].toLowerCase()] || Number(m[1])
