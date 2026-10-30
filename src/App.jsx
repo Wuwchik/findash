@@ -10,6 +10,7 @@ import Analytics from './components/Analytics'
 import Archive from './components/Archive'
 import Bank from './components/Bank'
 import Login from './components/Login'
+import { FinanceProvider, FinanceBoundary, FinanceCard, FinanceReturns } from './finance/Finance'
 
 const TABS = [
   { id: 'dashboard',    label: '📊 Дашборд' },
@@ -151,6 +152,7 @@ export default function App() {
   )
 
   return (
+    <FinanceProvider legacy={data.transactions}>
     <div style={{ minHeight: '100vh', background: '#f5f3ef' }}>
       {/* NAV */}
       <nav style={{
@@ -215,16 +217,17 @@ export default function App() {
       </nav>
 
       <div style={{ maxWidth: 1140, margin: '0 auto', padding: '28px 16px' }}>
-        {tab === 'dashboard'    && <Dashboard    data={data} save={save} onSnapshot={saveSnapshotNow} bankTransactions={bankTransactions} />}
+        {tab === 'dashboard'    && <><Dashboard data={data} save={save} onSnapshot={saveSnapshotNow} bankTransactions={bankTransactions} /><FinanceBoundary><FinanceCard /></FinanceBoundary></>}
         {tab === 'calendar'     && <Calendar     data={data} />}
         {tab === 'transactions' && <Transactions data={data} save={save} />}
         {tab === 'debtors'      && <Debtors      data={data} save={save} />}
-        {tab === 'returns'      && <Returns      data={data} save={save} />}
+        {tab === 'returns'      && <FinanceReturns><Returns data={data} save={save} /></FinanceReturns>}
         {tab === 'analytics'    && <Analytics    data={data} />}
         {tab === 'bank' && <Bank />}
         {tab === 'archive'      && <Archive      data={data} bankTransactions={bankTransactions} />}
         {tab === 'import'       && <Import       data={data} save={save} />}
       </div>
     </div>
+    </FinanceProvider>
   )
 }
