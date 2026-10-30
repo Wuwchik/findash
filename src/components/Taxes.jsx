@@ -24,7 +24,7 @@ export default function Taxes({ session, data, bankTransactions }) {
   const periods = useMemo(() => taxPeriods(2026), [])
   const period = periods[selectedQuarter - 1]
   const estimate = useMemo(() => quarterIncome(period, bankTransactions, data.transactions || [], settings.incomeOverrides), [period, bankTransactions, data.transactions, settings.incomeOverrides])
-  const events = useMemo(() => taxEvents(period, estimate.amount, settings), [period, estimate.amount, settings])
+  const events = useMemo(() => taxEvents(period, estimate.source === 'missing' ? null : estimate.amount, settings), [period, estimate.amount, settings])
   const statuses = settings.manualStatus || {}
   const esvLabel = settings.esvExempt ? 'Звільнення позначено власником' : 'Перевірити звільнення / фактичну суму'
 
@@ -110,13 +110,13 @@ export default function Taxes({ session, data, bankTransactions }) {
       <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
         <div style={{ flex:'1 1 210px' }}>
           <div style={note}>Орієнтовні надходження за квартал</div>
-          <div style={{ fontSize:22, fontWeight:800, color:'#2c5f2e', margin:'6px 0' }}>{formatUAH(estimate.amount)}</div>
+          <div style={{ fontSize:22, fontWeight:800, color:'#2c5f2e', margin:'6px 0' }}>{estimate.source === 'missing' ? '—' : formatUAH(estimate.amount)}</div>
           <div style={note}>Джерело: {estimate.source === 'manual' ? 'вручну перевірена сума' : estimate.source === 'bank' ? 'банківські надходження' : estimate.source === 'ledger' ? 'журнал операцій' : 'дані відсутні'}. Надходження ≠ податковий дохід.</div>
         </div>
         <div style={{ flex:'1 1 210px' }}>
           <div style={note}>Орієнтовно ЄП + ВЗ + ЄСВ</div>
           <div style={{ fontSize:22, fontWeight:800, color:'#1a1a1a', margin:'6px 0' }}>{formatUAH(estimated)}</div>
-          <div style={note}>Не включає можливі доплати, пеню, переплати та звільнення, не підтверджені ДПС.</div>
+          <div style={note}>Не включає можливі доплати, пеню, переплати. Якщо доходів немає в системі, ЄП та ВЗ не розраховано.</div>
         </div>
       </div>
       <div style={{ marginTop:18, display:'flex', gap:10, flexWrap:'wrap', alignItems:'end' }}>
