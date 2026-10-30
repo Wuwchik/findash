@@ -13,7 +13,8 @@ const datePart = x => String(x || '').slice(0, 10)
 export const DEFAULT_TAX_SETTINGS = Object.freeze({
   regime: 'fop3_5',
   esvExempt: false,
-  quarterlyIncome: {},
+  incomeOverrides: {},
+  manualStatus: {},
 })
 export const TAX_LABELS = {
   esv: 'ЄСВ за себе',
@@ -49,13 +50,14 @@ export function quarterIncome(period, bankTransactions=[], transactions=[], over
   return { amount: ledger.reduce((a,t)=>a+safeNumber(t.amount),0), source: ledger.length ? 'ledger' : 'missing' }
 }
 export function taxEvents(period, estimatedIncome, options=DEFAULT_TAX_SETTINGS) {
-  const income = Math.max(0,safeNumber(estimatedIncome))
+  const hasIncome = estimatedIncome !== null && estimatedIncome !== undefined && Number.isFinite(Number(estimatedIncome))
+  const income = hasIncome ? Math.max(0,Number(estimatedIncome)) : null
   const esv = options.esvExempt ? 0 : (period.year === 2026 ? 5707.02 : null)
   return [
     { id:`${period.key}:esv`, kind:'esv', due:period.esvDue, amount:esv, quarter:period.key },
     { id:`${period.key}:filing`, kind:'filing', due:period.filingDue, amount:null, quarter:period.key },
-    { id:`${period.key}:single`, kind:'single', due:period.paymentDue, amount:Math.round(income * 5)/100, quarter:period.key },
-    { id:`${period.key}:military`, kind:'military', due:period.paymentDue, amount:Math.round(income)/100, quarter:period.key },
+    { id:`${period.key}:single`, kind:'single', due:period.paymentDue, amount:hasIncome ? Math.round(income * 5)/100 : null, quarter:period.key },
+    { id:`${period.key}:military`, kind:'military', due:period.paymentDue, amount:hasIncome ? Math.round(income)/100 : null, quarter:period.key },
   ]
 }
 export const formatUAH = value => value === null || value === undefined ? '—' :
