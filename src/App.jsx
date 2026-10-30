@@ -9,6 +9,8 @@ import Calendar from './components/Calendar'
 import Analytics from './components/Analytics'
 import Archive from './components/Archive'
 import Bank from './components/Bank'
+import Taxes from './components/Taxes'
+import TaxNotificationMonitor from './components/TaxNotificationMonitor'
 import Login from './components/Login'
 
 const TABS = [
@@ -19,6 +21,7 @@ const TABS = [
   { id: 'returns',      label: '🔄 Повернення' },
   { id: 'analytics',    label: '📈 Аналітика' },
   { id: 'bank', label: '🏦 Банк' },
+  { id: 'taxes', label: '🏛️ Податки' },
   { id: 'archive',      label: '🗂 Архів' },
   { id: 'import',       label: '⬆ Імпорт' },
 ]
@@ -80,6 +83,22 @@ export default function App() {
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [session])
+
+  // Read-only refresh: new bank postings become visible without changing ledger or dashboards.
+  // Existing bank sync still controls when transactions reach Supabase.
+  useEffect(() => {
+    if (!session?.user?.id) return
+    let active = true
+    const timer = setInterval(async () => {
+      try {
+        const latest = await loadBankTransactions()
+        if (active) setBankTransactions(latest || [])
+      } catch (e) {
+        console.warn('Bank refresh unavailable', e)
+      }
+    }, 60000)
+    return () => { active = false; clearInterval(timer) }
+  }, [session?.user?.id])
 
   // Update date every minute
   useEffect(() => {
@@ -214,6 +233,9 @@ export default function App() {
         </div>
       </nav>
 
+      <TaxNotificationMonitor session={session} bankTransactions={bankTransactions}
+        transactions={data.transactions || []} onOpenTaxes={() => setTab('taxes')} />
+
       <div style={{ maxWidth: 1140, margin: '0 auto', padding: '28px 16px' }}>
         {tab === 'dashboard'    && <Dashboard    data={data} save={save} onSnapshot={saveSnapshotNow} bankTransactions={bankTransactions} />}
         {tab === 'calendar'     && <Calendar     data={data} />}
@@ -222,6 +244,7 @@ export default function App() {
         {tab === 'returns'      && <Returns      data={data} save={save} />}
         {tab === 'analytics'    && <Analytics    data={data} />}
         {tab === 'bank' && <Bank />}
+        {tab === 'taxes' && <Taxes session={session} data={data} bankTransactions={bankTransactions} />}
         {tab === 'archive'      && <Archive      data={data} bankTransactions={bankTransactions} />}
         {tab === 'import'       && <Import       data={data} save={save} />}
       </div>
