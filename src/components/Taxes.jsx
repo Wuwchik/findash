@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Card, SectionTitle, Btn } from '../ui.jsx'
+import TaxConnection from './TaxConnection.jsx'
 import { loadTaxSettings, saveTaxSettings } from '../taxStorage.js'
 import { DEFAULT_TAX_SETTINGS, TAX_LABELS, taxPeriods, quarterIncome, taxEvents, bankPaymentCandidates, formatUAH, displayDate, daysUntilDate } from '../taxes.js'
 
@@ -88,8 +89,11 @@ export default function Taxes({ session, data, bankTransactions }) {
         <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:'#1a1a1a' }}>🏛️ Податки · ФОП</div>
         <div style={note}>Податковий календар · прогноз з банку · контроль оплат</div>
       </div>
-      <div style={{ background:'#fef9e7', border:'1px solid #fde68a', color:'#92400e', borderRadius:10, padding:'9px 13px', fontWeight:700, fontSize:12 }}>
-        ДПС: ще не підключено
+      <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:10}}>
+        <span style={{ background:'#fef9e7', border:'1px solid #fde68a', color:'#92400e', borderRadius:10, padding:'9px 13px', fontWeight:700, fontSize:12 }}>
+          ДПС: ще не підключено
+        </span>
+        <TaxConnection />
       </div>
     </div>
     <div style={{ background:'#fff7ed', border:'1px solid #fed7aa', color:'#9a3412', padding:'13px 16px', borderRadius:12, marginBottom:16, fontSize:12, lineHeight:1.65 }}>
