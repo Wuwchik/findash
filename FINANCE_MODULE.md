@@ -54,3 +54,18 @@
 Тарифи при зміні перераховують історію. Для зміни тарифу з певної дати
 завершити старий запис і створити новий. Домени/хостинг додаються після
 отримання фактичних сум та строків оплати.
+
+
+## Optional payment splits (2026-11-03)
+
+Bank → «Розподіл» on an incoming payment: select hotel, its share and optional due date. Unsplit receipts retain their full value. Bank source rows and legacy `findash_data` are not rewritten. Rings now use own income (gross minus hotel share), keeping goal settings and layout. The independent green card also deducts ordinary expenses/refunds. Other legacy revenue/expense cards and charts retain their existing gross-accounting formulas.
+
+Hotel liabilities appear in Dashboard creditor total / upcoming payments (when due is set), Debts → «Виплати закладам», and Returns → «Виплати закладам». Link actual outgoing bank payments to settle in full or in parts. Each outgoing payment can settle one split only and is linked for its entire amount; combined transfers covering several splits and payments outside this bank are not supported in this release. Settlement never deducts own income twice. Correct a mistaken link by unlinking it; the bank payment remains unchanged. A split cannot be reduced below settled amounts or change hotel after settlement. Cancellation uses a zero amount, retaining the stable integration identity.
+
+### Future CRM contract — DISABLED
+
+`public.aura_hotel_debt_export` is an owner-authorized, read-only `security_invoker` view with `external_ref`, bank ID, hotel, optional CRM deal ID, due date, total/paid/outstanding amount, status and `crm_sync_enabled=false`. It is a full snapshot contract: a future connector must upsert by `external_ref`, including paid/cancelled records; do not use `updated_at` as a deletion/change cursor. Hotel matching and CRM deal mapping must be configured and approved before enabling any sender. There is no sender, cron, network request, CRM stage update or mutation to existing CRM functions. Existing `sync_new_payments_to_scope` only observes legacy data and is not triggered by these tables.
+
+### Validation
+
+`node --test tests/*.mjs`: 17 calculation cases. `tests/splits.sql`: transaction rollback fixtures for owner/RLS, validation, partial/full settlement, cancellation and duplicate-expense rejection in both directions. Executed in isolated PostgreSQL (PGlite), not with live payment data. Production schema and grants checked read-only. `AURA_QA_MODULES=/path/to/node_modules node tests/splits.dom.cjs`: DOM interaction test using jsdom and a mocked store. This is not a signed-in browser end-to-end test.
