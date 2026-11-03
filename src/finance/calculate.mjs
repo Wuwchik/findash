@@ -1,3 +1,4 @@
+import {ownIncome} from './splits.mjs'
 // Independent management calculation. Never mutates the legacy dashboard data.
 export const PERIODS = [['day','День'],['week','Тиждень'],['month','Місяць'],['quarter','Квартал'],['year','Рік']]
 const DAY = 86400000
@@ -20,17 +21,24 @@ const round = n => Math.round((n+Number.EPSILON)*100)/100
 const days = (a,b) => Math.max(0, Math.round((date(b)-date(a))/DAY)+1)
 const later = (a,b) => a>b?a:b
 const earlier = (a,b) => a<b?a:b
-export function calculate({bank=[], legacy=[], costs=[], refunds=[], links=[], cutoff, range, settings}) {
+export function calculate({bank=[], legacy=[], costs=[], refunds=[], links=[], splits=[], payouts=[], cutoff, range, settings}) {
   const issues=[], detail=[]
   if(settings?.launched_on && range.start < settings.launched_on.slice(0,7)+'-01') issues.push('Історичні витрати до місяця запуску потребують внесення.')
   const byBank = new Map(links.map(x=>[x.bank_id,x]))
   const byCost = new Map(costs.map(x=>[x.id,x]))
   const byRefund = new Map(refunds.map(x=>[x.id,x]))
   const selected = bank.filter(x=>inRange(bankDay(x.date),range))
-  const income = sum(selected.filter(x=>x.type==='income'))
+  const grossIncome = sum(selected.filter(x=>x.type==='income'))
+  const income = selected.filter(x=>x.type==='income').reduce((n,t)=>n+ownIncome(t,splits),0)
+  const hotelShare = grossIncome-income
+  for(const t of selected.filter(t=>t.type==='income')) {
+    const share=Number(t.amount)-ownIncome(t,splits)
+    if(share>0)detail.push({date:bankDay(t.date),name:splits.find(s=>s.bank_id===t.id)?.hotel||'Заклад',amount:share,kind:'Частка закладу'})
+  }
   let bankExpense=0, manualExpense=0, recurringExpense=0, refundTotal=0, unreviewed=0, estimated=0
   for (const t of selected.filter(x=>x.type==='expense')) {
     const l=byBank.get(t.id), amount=Math.abs(number(t.amount))
+    if (payouts.some(p=>p.bank_id===t.id)) continue
     if (l?.kind==='exclude') continue
     if (l?.kind==='refund' && byRefund.has(l.refund_id)) continue
     if (l?.kind==='cost' && byCost.has(l.cost_id)) continue
@@ -92,5 +100,5 @@ export function calculate({bank=[], legacy=[], costs=[], refunds=[], links=[], c
     }
   }
   const expenses=bankExpense+manualExpense+recurringExpense
-  return {income:round(income),refunds:round(refundTotal),expenses:round(expenses),net:round(income-refundTotal-expenses),unreviewed:round(unreviewed),estimated:round(estimated),issues:[...new Set(issues)],detail:detail.map(x=>({...x,amount:round(x.amount)})),bankExpense:round(bankExpense),manualExpense:round(manualExpense),recurringExpense:round(recurringExpense)}
+  return {grossIncome:round(grossIncome),hotelShare:round(hotelShare),income:round(income),refunds:round(refundTotal),expenses:round(expenses),net:round(income-refundTotal-expenses),unreviewed:round(unreviewed),estimated:round(estimated),issues:[...new Set(issues)],detail:detail.map(x=>({...x,amount:round(x.amount)})),bankExpense:round(bankExpense),manualExpense:round(manualExpense),recurringExpense:round(recurringExpense)}
 }

@@ -1,3 +1,5 @@
+import {SplitButton} from '../finance/Splits'
+import {useFinance} from '../finance/Finance'
 import { useState, useEffect } from 'react'
 import { loadBankTransactions, updateBankTransaction, syncPrivatBank } from '../storage'
 import { fmt, CATEGORIES, Card, SectionTitle, Btn } from '../ui.jsx'
@@ -6,6 +8,7 @@ import { HOTELS } from '../counterparties.js'
 const fmtDate = ds => ds ? new Intl.DateTimeFormat('uk', { day:'numeric', month:'short', year:'numeric' }).format(new Date(ds)) : ''
 
 export default function Bank({ onImportToMain }) {
+  const {reload:reloadFinance}=useFinance()
   const [txns, setTxns] = useState([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -27,6 +30,7 @@ export default function Bank({ onImportToMain }) {
     const result = await syncPrivatBank()
     setSyncResult(result)
     await load()
+    await reloadFinance()
     setSyncing(false)
   }
 
@@ -129,6 +133,7 @@ export default function Bank({ onImportToMain }) {
               </div>
             </div>
 
+            <SplitButton payment={t}/>
             {/* Category + Hotel selectors */}
             <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
               <select

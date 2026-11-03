@@ -1,3 +1,4 @@
+import {HotelDebts} from './finance/Splits'
 import { useState, useEffect, useCallback } from 'react'
 import { loadData, saveData, defaultData, loadBankTransactions, supabase } from './storage'
 import Dashboard from './components/Dashboard'
@@ -220,7 +221,7 @@ export default function App() {
         {tab === 'dashboard'    && <><Dashboard data={data} save={save} onSnapshot={saveSnapshotNow} bankTransactions={bankTransactions} /><FinanceBoundary><FinanceCard /></FinanceBoundary></>}
         {tab === 'calendar'     && <Calendar     data={data} />}
         {tab === 'transactions' && <Transactions data={data} save={save} />}
-        {tab === 'debtors'      && <Debtors      data={data} save={save} />}
+        {tab === 'debtors'      && <><Debtors data={data} save={save}/><FinanceBoundary><HotelDebts/></FinanceBoundary></>}
         {tab === 'returns'      && <FinanceReturns><Returns data={data} save={save} /></FinanceReturns>}
         {tab === 'analytics'    && <Analytics    data={data} />}
         {tab === 'bank' && <Bank />}

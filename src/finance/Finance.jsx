@@ -1,8 +1,10 @@
+import {HotelDebts} from './Splits'
 import React, {createContext,useContext,useEffect,useState,useCallback} from 'react'
 import {loadFinance,saveFinance,removeLink} from './store'
 import {calculate,periodRange,PERIODS,today,bankDay} from './calculate.mjs'
 import './finance.css'
-const Context=createContext(null)
+export const Context=createContext(null)
+export const useFinance=()=>useContext(Context)
 const money=n=>new Intl.NumberFormat('uk-UA',{style:'currency',currency:'UAH',maximumFractionDigits:2}).format(n)
 const categories=[['ai','Штучний інтелект'],['software','Програми / шахматка'],['advertising','Реклама'],['phone','Телефонія'],['domains','Домени'],['hosting','Хостинг'],['hotels','Виплати готелям'],['tax','Податки'],['other','Інше']]
 const frequencies={once:'Разова',monthly:'Щомісяця',yearly:'Щороку (розподіл на 12 місяців)'}
@@ -27,8 +29,8 @@ export function FinanceCard(){
   <div className="af-row"><div><div className="af-eyebrow">ОКРЕМИЙ ФІНАНСОВИЙ РОЗРАХУНОК</div><h2>Чистий дохід</h2></div><button onClick={reload}>Оновити дані</button></div>
   <div className="af-row af-periods">{PERIODS.map(([id,label])=><button key={id} aria-pressed={period===id} className={period===id?'selected':''} onClick={()=>setPeriod(id)}>{label}</button>)}<label>Станом на <input aria-label="Станом на" type="date" value={asOf} max={today()} onChange={e=>e.target.value&&setAsOf(e.target.value)}/></label></div>
   <div className="af-number">{money(result.net)}</div><div>{range.start} — {range.end} · за київським часом</div>
-  <div className="af-metrics">{[['Надходження',result.income],['Повернення',-result.refunds],['Витрати',-result.expenses]].map(([name,value])=><div key={name}><span>{name}</span><strong>{money(value)}</strong></div>)}</div>
-  <p>Надходження з банку − повернення на етапі CRM − витрати за період. Особисті перекази не є витратами бізнесу.</p>
+  <div className="af-metrics">{[['Надходження з банку',result.grossIncome],['Частка закладів',-result.hotelShare],['Мій дохід',result.income],['Повернення',-result.refunds],['Витрати',-result.expenses]].map(([name,value])=><div key={name}><span>{name}</span><strong>{money(value)}</strong></div>)}</div>
+  <p>Надходження з банку − частки закладів − повернення на етапі CRM − витрати за період. Виплата частки закладу не віднімається повторно. Особисті перекази не є витратами бізнесу.</p>
   {result.estimated>0&&<p>За тарифами нараховано {money(result.estimated)}. Прив’яжіть фактичні оплати у вкладці «Витрати», щоб уточнити суми.</p>}
   {result.issues.length>0&&<div className="af-warning"><strong>Попередній результат — потрібне уточнення ({result.issues.length})</strong><p>Сума ще не враховує всі неперевірені платежі. Додайте також виплати готелям, податки та витрати з інших рахунків, якщо вони є.</p><details><summary>Що потрібно перевірити</summary><ul>{result.issues.map(x=><li key={x}>{x}</li>)}</ul></details></div>}
   <button onClick={()=>setExpanded(!expanded)} aria-expanded={expanded}>Деталізація розрахунку</button>
@@ -75,7 +77,7 @@ function BankLink({t}){
 }
 function Expenses(){
  const {state}=useContext(Context),[form,setForm]=useState(null),[month,setMonth]=useState(today().slice(0,7)),[page,setPage]=useState(0),[filter,setFilter]=useState('pending')
- const bank=state.bank.filter(t=>t.type==='expense'&&bankDay(t.date).startsWith(month)).filter(t=>filter==='all'||(!state.links.some(l=>l.bank_id===t.id)&&t.category!=='personal')).sort((a,b)=>(b.date||'').localeCompare(a.date||''))
+ const bank=state.bank.filter(t=>!state.payouts.some(p=>p.bank_id===t.id)).filter(t=>t.type==='expense'&&bankDay(t.date).startsWith(month)).filter(t=>filter==='all'||(!state.links.some(l=>l.bank_id===t.id)&&t.category!=='personal')).sort((a,b)=>(b.date||'').localeCompare(a.date||''))
  return <><div className="af-row"><h2>Витрати</h2><button onClick={()=>setForm({})}>+ Додати витрату</button></div>
  <p>Початкові підписки внесені з початку місяця запуску. Вкажіть курс або прив’яжіть фактичну оплату. Рекламу, телефонію, домени, хостинг та інші платежі можна додавати самостійно.</p>
  {form&&<CostForm key={form.id||'new'} item={form.id?form:null} onClose={()=>setForm(null)}/>}
@@ -87,7 +89,7 @@ function Expenses(){
 }
 export function FinanceReturns({children}){
  const {state,error,reload}=useContext(Context),[tab,setTab]=useState('returns')
- return <><div className="af af-tabs"><button className={tab==='returns'?'selected':''} onClick={()=>setTab('returns')}>Повернення</button><button className={tab==='expenses'?'selected':''} onClick={()=>setTab('expenses')}>Витрати</button></div>
+ return <><div className="af af-tabs"><button className={tab==='returns'?'selected':''} onClick={()=>setTab('returns')}>Повернення</button><button className={tab==='expenses'?'selected':''} onClick={()=>setTab('expenses')}>Витрати</button><button className={tab==='hotels'?'selected':''} onClick={()=>setTab('hotels')}>Виплати закладам</button></div>
  {tab==='returns'&&children}
- <FinanceBoundary><div className="af"><Status/>{state&&!error&&(tab==='expenses'?<Expenses/>:<details className="af-item"><summary>Повернення в новому розрахунку чистого доходу ({state.refunds.length})</summary><p>Фіксована межа: {state.settings.refund_cutoff}. Старші повернення не віднімаються. Дата виплати не підміняє дату переходу в CRM.</p><button onClick={reload}>Оновити</button>{state.refunds.map(r=><RefundRow key={r.id+JSON.stringify(r)} r={r} cutoff={state.settings.refund_cutoff}/>)}</details>)}</div></FinanceBoundary></>
+ <FinanceBoundary><div className="af"><Status/>{state&&!error&&(tab==='expenses'?<Expenses/>:tab==='hotels'?<HotelDebts/>:<details className="af-item"><summary>Повернення в новому розрахунку чистого доходу ({state.refunds.length})</summary><p>Фіксована межа: {state.settings.refund_cutoff}. Старші повернення не віднімаються. Дата виплати не підміняє дату переходу в CRM.</p><button onClick={reload}>Оновити</button>{state.refunds.map(r=><RefundRow key={r.id+JSON.stringify(r)} r={r} cutoff={state.settings.refund_cutoff}/>)}</details>)}</div></FinanceBoundary></>
 }
