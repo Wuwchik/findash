@@ -69,3 +69,14 @@ Hotel liabilities appear in Dashboard creditor total / upcoming payments (when d
 ### Validation
 
 `node --test tests/*.mjs`: 17 calculation cases. `tests/splits.sql`: transaction rollback fixtures for owner/RLS, validation, partial/full settlement, cancellation and duplicate-expense rejection in both directions. Executed in isolated PostgreSQL (PGlite), not with live payment data. Production schema and grants checked read-only. `AURA_QA_MODULES=/path/to/node_modules node tests/splits.dom.cjs`: DOM interaction test using jsdom and a mocked store. This is not a signed-in browser end-to-end test.
+
+
+## Split performance update (2026-11-03)
+
+Bank and hotel-debt lists render at most 50 records per page. Bank search and month filter operate over the complete loaded history, including transactions beyond the former 1,000-row Bank request. Gross summary cards remain explicitly for all history. The Bank view reuses the finance cache, avoiding a second Bank-specific request. The cache excludes raw bank API payloads; source rows remain unchanged.
+
+A single portal dialog hosts the active split editor, traps keyboard focus, supports Escape and returns focus on close. Typing updates only its local form. A hotel payout selector mounts on demand and shows at most 50 options, with search and pagination. Lookup maps, memoized lists/calculation and reusable date formatters reduce repeated work.
+
+Writes now request the canonical changed row from Supabase and merge that row into the relevant cached collection; deletes remove only the confirmed ID. All other collection references remain stable. The database remains authoritative for validation and payout amounts. Explicit Refresh and bank sync still reload the complete finance snapshot. Concurrent writes are gated; snapshots started before a mutation cannot overwrite its result. No database migration, schema, CRM connector, financial formula or goal setting changes.
+
+Validation adds a 2,000-receipt DOM fixture (50 cards mounted), full-history search, typing without requests, save without history reload, and rejected-save retry. DOM timings are development-environment measurements, not measurements of the user's browser. Existing 17 calculation tests remain unchanged.

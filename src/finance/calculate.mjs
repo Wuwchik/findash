@@ -4,8 +4,9 @@ export const PERIODS = [['day','День'],['week','Тиждень'],['month','�
 const DAY = 86400000
 export const iso = d => d.toISOString().slice(0,10)
 export const date = s => new Date(`${s.slice(0,10)}T00:00:00Z`)
-export const today = () => new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Kyiv', year:'numeric',month:'2-digit',day:'2-digit' }).format(new Date())
-export const bankDay = s => s ? new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit' }).format(new Date(s)) : ''
+const kyivDayFormatter = new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'})
+export const today = () => kyivDayFormatter.format(new Date())
+export const bankDay = s => s ? kyivDayFormatter.format(new Date(s)) : ''
 export function periodRange(kind, asOf) {
   const end = date(asOf), start = date(asOf)
   if (kind === 'week') start.setUTCDate(start.getUTCDate() - (start.getUTCDay()+6)%7)

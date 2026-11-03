@@ -1,58 +1,53 @@
-import {SplitButton} from '../finance/Splits'
+import {saveBankField} from '../finance/store'
+import {bankDay} from '../finance/calculate.mjs'
+import {SplitButton,SplitDialog} from '../finance/Splits'
 import {useFinance} from '../finance/Finance'
-import { useState, useEffect } from 'react'
-import { loadBankTransactions, updateBankTransaction, syncPrivatBank } from '../storage'
+import { useState, useMemo, useCallback, memo } from 'react'
+import { syncPrivatBank } from '../storage'
 import { fmt, CATEGORIES, Card, SectionTitle, Btn } from '../ui.jsx'
 import { HOTELS } from '../counterparties.js'
 
-const fmtDate = ds => ds ? new Intl.DateTimeFormat('uk', { day:'numeric', month:'short', year:'numeric' }).format(new Date(ds)) : ''
+const dateFormatter = new Intl.DateTimeFormat('uk', {day:'numeric',month:'short',year:'numeric'})
+const fmtDate = ds => ds ? dateFormatter.format(new Date(ds)) : ''
+const EMPTY=[]
 
 export default function Bank({ onImportToMain }) {
-  const {reload:reloadFinance}=useFinance()
-  const [txns, setTxns] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
-  const [filter, setFilter] = useState('all') // all | uncategorized | income | expense
-  const [syncResult, setSyncResult] = useState(null)
-
-  const load = async () => {
-    setLoading(true)
-    const data = await loadBankTransactions()
-    setTxns(data)
-    setLoading(false)
-  }
-
-  useEffect(() => { load() }, [])
-
+  const {state,error,mutate,reload:reloadFinance}=useFinance()
+  const txns=state?.bank||EMPTY
+  const loading=!state
+  const [syncing,setSyncing]=useState(false),[filter,setFilter]=useState('all'),[syncResult,setSyncResult]=useState(null)
+  const [search,setSearch]=useState(''),[month,setMonth]=useState(''),[page,setPage]=useState(0),[editing,setEditing]=useState(null)
+  const closeEditor=useCallback(()=>setEditing(null),[])
   const handleSync = async () => {
     setSyncing(true)
     setSyncResult(null)
     const result = await syncPrivatBank()
     setSyncResult(result)
-    await load()
     await reloadFinance()
     setSyncing(false)
   }
 
-  const setField = async (id, field, value) => {
-    setTxns(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t))
-    await updateBankTransaction(id, { [field]: value })
-  }
+  const setField=useCallback((id,field,value)=>mutate(()=>saveBankField(id,field,value)),[mutate])
+  const sorted=useMemo(()=>[...txns].sort((a,b)=>(b.date||'').localeCompare(a.date||'')),[txns])
+  const filtered=useMemo(()=>{
+    const term=search.trim().toLocaleLowerCase('uk-UA')
+    return sorted.filter(t=>{
+      if(filter==='uncategorized'&&t.category&&(t.type!=='income'||t.hotel))return false
+      if(['income','expense'].includes(filter)&&t.type!==filter)return false
+      if(month&&!bankDay(t.date).startsWith(month))return false
+      return !term||[t.bank_counterparty,t.description,t.hotel,t.amount,t.id].join(' ').toLocaleLowerCase('uk-UA').includes(term)
+    })
+  },[sorted,filter,search,month])
+  const pageCount=Math.max(1,Math.ceil(filtered.length/50)),activePage=Math.min(page,pageCount-1)
+  const visible=useMemo(()=>filtered.slice(activePage*50,activePage*50+50),[filtered,activePage])
+  const {uncategorizedCount,totalIncome,totalExpense}=useMemo(()=>({
+    uncategorizedCount:txns.filter(t=>!t.category||(t.type==='income'&&!t.hotel)).length,
+    totalIncome:txns.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount),0),
+    totalExpense:txns.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount),0)
+  }),[txns])
 
-  const filtered = txns.filter(t => {
-    if (filter === 'uncategorized') return !t.category || !t.hotel
-    if (filter === 'income') return t.type === 'income'
-    if (filter === 'expense') return t.type === 'expense'
-    return true
-  })
 
-  const uncategorizedCount = txns.filter(t => !t.category || (t.type === 'income' && !t.hotel)).length
-  const totalIncome = txns.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.amount), 0)
-  const totalExpense = txns.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0)
-
-  const expenseCategories = CATEGORIES.expense
-  const incomeCategories = CATEGORIES.income
-
+  if(error&&!state)return <div className="af af-notice">{error}<button onClick={reloadFinance}>Повторити</button></div>
   if (loading) return (
     <Card style={{ textAlign:'center', padding:48 }}>
       <div style={{ fontSize:14, color:'#b0a898' }}>Завантаження банківських транзакцій...</div>
@@ -100,7 +95,7 @@ export default function Bank({ onImportToMain }) {
           ['income', 'Надходження'],
           ['expense', 'Витрати'],
         ].map(([id, label]) => (
-          <button key={id} onClick={() => setFilter(id)} style={{
+          <button key={id} onClick={() => {setFilter(id);setPage(0)}} style={{
             padding:'7px 14px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:600,
             fontFamily:"'DM Sans',sans-serif",
             background: filter === id ? '#2c5f2e' : '#f5f3ef',
@@ -109,11 +104,32 @@ export default function Bank({ onImportToMain }) {
         ))}
       </div>
 
-      {/* Transactions list */}
-      {filtered.map(t => {
+      {error&&<div className="af af-notice" role="alert">{error}<button onClick={reloadFinance}>Оновити дані</button></div>}
+      <div className="af af-row">
+        <input aria-label="Пошук платежу" placeholder="Ім’я, заклад, призначення або сума" value={search} onChange={e=>{setSearch(e.target.value);setPage(0)}}/>
+        <label>Місяць <input aria-label="Місяць платежів" type="month" value={month} onChange={e=>{setMonth(e.target.value);setPage(0)}}/></label>
+        <button onClick={()=>{setMonth('');setSearch('');setFilter('all');setPage(0)}}>Уся історія</button>
+      </div>
+      <p style={{fontSize:12,color:'#78716c',marginBottom:12}}>Знайдено {filtered.length} платежів. Підсумки зверху — за всією історією.</p>
+      <BankRows transactions={visible} setField={setField} onOpen={setEditing}/>
+      <div className="af af-row"><button disabled={activePage===0} onClick={()=>setPage(activePage-1)}>Попередні платежі</button><span>Сторінка {activePage+1} з {pageCount} · по 50 платежів</span><button disabled={activePage+1>=pageCount} onClick={()=>setPage(activePage+1)}>Наступні платежі</button></div>
+      {editing&&<SplitDialog payment={state.bank.find(b=>b.id===editing.id)||editing} onClose={closeEditor}/>}
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign:'center', padding:40, color:'#b0a898', fontSize:14 }}>
+          {filter === 'uncategorized' ? 'Всі транзакції оброблені! 🎉' : 'Немає транзакцій'}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const BankRows=memo(function BankRows({transactions,setField,onOpen}) {
+ const expenseCategories=CATEGORIES.expense,incomeCategories=CATEGORIES.income
+ return <>      {transactions.map(t => {
         const needsAttention = !t.category || (t.type === 'income' && !t.hotel)
         return (
-          <div key={t.id} style={{
+          <div data-bank-row={t.id} key={t.id} style={{
             background:'#fff', border:'1px solid #e8e4dc', borderRadius:12, padding:'14px 16px', marginBottom:8,
             borderLeft:`3px solid ${t.type === 'income' ? '#16a34a' : '#dc2626'}`,
             boxShadow:'0 1px 4px rgba(0,0,0,.03)'
@@ -133,7 +149,7 @@ export default function Bank({ onImportToMain }) {
               </div>
             </div>
 
-            <SplitButton payment={t}/>
+            <SplitButton payment={t} onOpen={onOpen}/>
             {/* Category + Hotel selectors */}
             <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
               <select
@@ -176,12 +192,5 @@ export default function Bank({ onImportToMain }) {
           </div>
         )
       })}
-
-      {filtered.length === 0 && (
-        <div style={{ textAlign:'center', padding:40, color:'#b0a898', fontSize:14 }}>
-          {filter === 'uncategorized' ? 'Всі транзакції оброблені! 🎉' : 'Немає транзакцій'}
-        </div>
-      )}
-    </div>
-  )
-}
+</>
+})
