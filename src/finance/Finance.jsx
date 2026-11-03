@@ -1,5 +1,5 @@
 import {HotelDebts} from './Splits'
-import React, {createContext,useContext,useEffect,useState,useCallback} from 'react'
+import React, {createContext,useContext,useEffect,useState,useCallback,useMemo,useRef} from 'react'
 import {loadFinance,saveFinance,removeLink} from './store'
 import {calculate,periodRange,PERIODS,today,bankDay} from './calculate.mjs'
 import './finance.css'
@@ -15,16 +15,47 @@ export class FinanceBoundary extends React.Component {
 }
 export function FinanceProvider({children,legacy}) {
   const [state,setState]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
-  const reload=useCallback(async()=>{try{setError('');setState(await loadFinance())}catch(e){setError(e.message||'Не вдалося завантажити фінанси')}},[])
-  useEffect(()=>{reload()},[reload])
-  const mutate=async(fn)=>{setBusy(true);try{await fn();await reload();return true}catch(e){setError(e.message||'Не вдалося зберегти');return false}finally{setBusy(false)}}
-  return <Context.Provider value={{state,error,busy,reload,mutate,legacy}}>{children}</Context.Provider>
+  const version=useRef(0),writing=useRef(false)
+  const reload=useCallback(async()=>{
+    if(writing.current)return
+    const request=++version.current
+    try{setError('');const next=await loadFinance();if(request===version.current)setState(next)}
+    catch(e){if(request===version.current)setError(e.message||'Не вдалося завантажити фінанси')}
+  },[])
+  useEffect(()=>{reload();return()=>{version.current++}},[reload])
+  const mutate=useCallback(async(fn)=>{
+    if(writing.current)return false
+    writing.current=true;version.current++;setBusy(true);setError('')
+    try{
+      const change=await fn()
+      if(!change?.table)throw new Error('Не вдалося отримати підтвердження збереження. Оновіть дані.')
+      setState(previous=>{
+        if(!previous)return previous
+        const rows=previous[change.table]
+        const next=change.remove?rows.filter(r=>r.id!==change.remove):rows.some(r=>r.id===change.row.id)?rows.map(r=>r.id===change.row.id?change.row:r):[...rows,change.row]
+        return {...previous,[change.table]:next}
+      })
+      return true
+    }catch(e){setError(e.message||'Не вдалося зберегти');return false}
+    finally{writing.current=false;setBusy(false)}
+  },[])
+  const indexes=useMemo(()=>{
+    const byBank=new Map(),splitByBank=new Map(),payoutsBySplit=new Map(),usedBank=new Set()
+    for(const b of state?.bank||[])byBank.set(b.id,b)
+    for(const s of state?.splits||[])splitByBank.set(s.bank_id,s)
+    for(const p of state?.payouts||[]){const group=payoutsBySplit.get(p.split_id)||[];group.push(p);payoutsBySplit.set(p.split_id,group);usedBank.add(p.bank_id)}
+    for(const l of state?.links||[])usedBank.add(l.bank_id)
+    return {byBank,splitByBank,payoutsBySplit,usedBank}
+  },[state?.bank,state?.splits,state?.payouts,state?.links])
+  const value=useMemo(()=>({state,error,busy,reload,mutate,legacy,indexes}),[state,error,busy,reload,mutate,legacy,indexes])
+  return <Context.Provider value={value}>{children}</Context.Provider>
 }
 function Status(){const {state,error,reload}=useContext(Context);return error?<div className="af-notice" role="alert">Дані нового розрахунку недоступні або не оновлені: {error} <button onClick={reload}>Повторити</button></div>:!state?<div className="af-notice">Завантаження нового розрахунку…</div>:null}
 export function FinanceCard(){
  const {state,error,legacy,reload}=useContext(Context),[period,setPeriod]=useState('month'),[asOf,setAsOf]=useState(today()),[expanded,setExpanded]=useState(false)
+ const range=useMemo(()=>periodRange(period,asOf),[period,asOf])
+ const result=useMemo(()=>state?calculate({...state,legacy,cutoff:state.settings.refund_cutoff,range}):null,[state,legacy,range])
  if(!state||error) return <Status/>
- const range=periodRange(period,asOf), result=calculate({...state,legacy,cutoff:state.settings.refund_cutoff,range})
  return <section className="af af-summary" aria-label="Окремий розрахунок чистого доходу">
   <div className="af-row"><div><div className="af-eyebrow">ОКРЕМИЙ ФІНАНСОВИЙ РОЗРАХУНОК</div><h2>Чистий дохід</h2></div><button onClick={reload}>Оновити дані</button></div>
   <div className="af-row af-periods">{PERIODS.map(([id,label])=><button key={id} aria-pressed={period===id} className={period===id?'selected':''} onClick={()=>setPeriod(id)}>{label}</button>)}<label>Станом на <input aria-label="Станом на" type="date" value={asOf} max={today()} onChange={e=>e.target.value&&setAsOf(e.target.value)}/></label></div>
