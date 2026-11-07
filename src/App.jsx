@@ -10,6 +10,9 @@ import Calendar from './components/Calendar'
 import Analytics from './components/Analytics'
 import Archive from './components/Archive'
 import Bank from './components/Bank'
+import Taxes from './components/Taxes'
+import TaxNotificationMonitor from './components/TaxNotificationMonitor'
+import { unreadDpsLetters } from './taxDpsStorage'
 import Login from './components/Login'
 import { FinanceProvider, FinanceBoundary, FinanceCard, FinanceReturns } from './finance/Finance'
 
@@ -21,6 +24,7 @@ const TABS = [
   { id: 'returns',      label: '🔄 Повернення' },
   { id: 'analytics',    label: '📈 Аналітика' },
   { id: 'bank', label: '🏦 Банк' },
+  { id: 'taxes', label: '🏛️ Податки' },
   { id: 'archive',      label: '🗂 Архів' },
   { id: 'import',       label: '⬆ Імпорт' },
 ]
@@ -41,6 +45,8 @@ export default function App() {
   const [tab, setTab] = useState('dashboard')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [session, setSession] = useState(undefined) // undefined = ще не перевірено
+  const [dpsUnread, setDpsUnread] = useState(0)       // нові листи з податкової (ще не відкриті в A.U.R.A)
+  const refreshDpsUnread = useCallback(() => { unreadDpsLetters().then(setDpsUnread).catch(() => {}) }, [])
 
   // Track auth session
   useEffect(() => {
@@ -82,6 +88,29 @@ export default function App() {
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [session])
+
+  // Read-only refresh: new bank postings become visible without changing ledger or dashboards.
+  // Existing bank sync still controls when transactions reach Supabase.
+  useEffect(() => {
+    if (!session?.user?.id) return
+    let active = true
+    const timer = setInterval(async () => {
+      try {
+        const latest = await loadBankTransactions()
+        if (active) setBankTransactions(latest || [])
+      } catch (e) {
+        console.warn('Bank refresh unavailable', e)
+      }
+    }, 60000)
+    return () => { active = false; clearInterval(timer) }
+  }, [session?.user?.id])
+
+  useEffect(() => {
+    if (!session?.user?.id) return
+    refreshDpsUnread()
+    const timer = setInterval(refreshDpsUnread, 120000)
+    return () => clearInterval(timer)
+  }, [session?.user?.id, refreshDpsUnread])
 
   // Update date every minute
   useEffect(() => {
@@ -198,7 +227,9 @@ export default function App() {
               color: tab === t.id ? '#fff' : '#7a7060',
               transition: 'all .2s',
             }}>
-              {t.id === 'debtors' && overdueCount > 0 ? `${t.label} (${overdueCount})` : t.label}
+              {t.id === 'debtors' && overdueCount > 0 ? `${t.label} (${overdueCount})`
+                : t.id === 'taxes' && dpsUnread > 0 ? <>{t.label} <span style={{ background:'#dc2626', color:'#fff', borderRadius:9, padding:'1px 6px', fontSize:10, marginLeft:2 }}>{dpsUnread}</span></>
+                : t.label}
             </button>
           ))}
           <button onClick={() => supabase.auth.signOut()} style={{
@@ -217,6 +248,9 @@ export default function App() {
         </div>
       </nav>
 
+      <TaxNotificationMonitor session={session} bankTransactions={bankTransactions}
+        transactions={data.transactions || []} onOpenTaxes={() => setTab('taxes')} />
+
       <div style={{ maxWidth: 1140, margin: '0 auto', padding: '28px 16px' }}>
         {tab === 'dashboard'    && <><Dashboard data={data} save={save} onSnapshot={saveSnapshotNow} bankTransactions={bankTransactions} /><FinanceBoundary><FinanceCard /></FinanceBoundary></>}
         {tab === 'calendar'     && <Calendar     data={data} />}
@@ -225,6 +259,7 @@ export default function App() {
         {tab === 'returns'      && <FinanceReturns><Returns data={data} save={save} /></FinanceReturns>}
         {tab === 'analytics'    && <Analytics    data={data} />}
         {tab === 'bank' && <Bank />}
+        {tab === 'taxes' && <Taxes session={session} data={data} bankTransactions={bankTransactions} onDpsChange={refreshDpsUnread} />}
         {tab === 'archive'      && <Archive      data={data} bankTransactions={bankTransactions} />}
         {tab === 'import'       && <Import       data={data} save={save} />}
       </div>

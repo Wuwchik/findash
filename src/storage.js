@@ -4,6 +4,8 @@ const SUPABASE_URL = 'https://rgfexlipniijwadwgmxf.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnZmV4bGlwbmlpandhZHdnbXhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjY0MjgsImV4cCI6MjA5NDg0MjQyOH0.DSsIX_Xao5kH0E_3d6xVZd8NjEqRtGp5GhF0_7u_Lv4'
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+export const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`
+export const PUBLIC_ANON_KEY = SUPABASE_ANON_KEY
 
 export function defaultData() {
   return {
