@@ -52,7 +52,8 @@ export function quarterIncome(period, bankTransactions=[], transactions=[], over
 export function taxEvents(period, estimatedIncome, options=DEFAULT_TAX_SETTINGS) {
   const hasIncome = estimatedIncome !== null && estimatedIncome !== undefined && Number.isFinite(Number(estimatedIncome))
   const income = hasIncome ? Math.max(0,Number(estimatedIncome)) : null
-  const esv = options.esvExempt ? 0 : (period.year === 2026 ? 5707.02 : null)
+  // ЄСВ 2026: 22% × 8 000 грн = 1 760 грн/міс — так нараховує ДПС (стан розрахунків, КБК 71040000)
+  const esv = options.esvExempt ? 0 : (period.year === 2026 ? 5280 : null)
   return [
     { id:`${period.key}:esv`, kind:'esv', due:period.esvDue, amount:esv, quarter:period.key },
     { id:`${period.key}:filing`, kind:'filing', due:period.filingDue, amount:null, quarter:period.key },

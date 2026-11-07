@@ -13,12 +13,12 @@ const importKey = process.env.DPS_IMPORT_KEY
 if (!file || !importKey) { console.error('Потрібно: DPS_IMPORT_KEY і шлях до файлу'); process.exit(2) }
 
 const text = readFileSync(file, 'utf8').split(/\r?\n/).filter(l => !l.trim().startsWith('#')).join('\n').trim()
-if (!text) { console.error('Файл порожній: вставте підпис (MII…) або шлях до .p7s'); process.exit(1) }
+if (!text) { console.error('Файл порожній: вставте підпис (MII…) або шлях до .p7s'); process.exitCode = 1; process.exit() }
 
 let token
 const maybePath = text.replace(/^"|"$/g, '')
 if (!text.startsWith('MII') && existsSync(maybePath)) {
-  if (KEY_FILES.test(maybePath)) { console.error('Це файл ключа КЕП — його НЕ потрібно. Потрібен підписаний .p7s.'); process.exit(1) }
+  if (KEY_FILES.test(maybePath)) { console.error('Це файл ключа КЕП — його НЕ потрібно. Потрібен підписаний .p7s.'); process.exitCode = 1; process.exit() }
   const buf = readFileSync(maybePath)
   token = buf.subarray(0, 3).toString() === 'MII' ? buf.toString('utf8') : buf.toString('base64')
   console.log(`Прочитано підписаний файл (${buf.length} байт)`)
@@ -34,8 +34,9 @@ const res = await fetch(FN, {
   body: JSON.stringify({ action: 'import_token', token }),
 })
 const body = await res.json().catch(() => ({}))
-if (!res.ok) { console.error(`Не підключено: ${body.error || res.status}`); process.exit(1) }
+if (!res.ok) { console.error(`Не підключено: ${body.error || res.status}`); process.exitCode = 1 } else {
 
 writeFileSync(file, '# ДПС підключено ' + new Date().toLocaleString('uk-UA') + '. Підпис з цього файлу видалено — він зберігається лише у сховищі секретів A.U.R.A.\n')
 const { status, operations, newLetters, reports, error } = body
 console.log(`ДПС підключено ✓ Стан: ${status}${error ? ` (${error})` : ''}; операцій: ${operations ?? 0}, листів: ${newLetters ?? 0}, звітів: ${reports ?? 0}`)
+}
