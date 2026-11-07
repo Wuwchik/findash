@@ -1,3 +1,4 @@
+import {HotelDebts} from './finance/Splits'
 import { useState, useEffect, useCallback } from 'react'
 import { loadData, saveData, defaultData, loadBankTransactions, supabase } from './storage'
 import Dashboard from './components/Dashboard'
@@ -12,6 +13,7 @@ import Bank from './components/Bank'
 import Taxes from './components/Taxes'
 import TaxNotificationMonitor from './components/TaxNotificationMonitor'
 import Login from './components/Login'
+import { FinanceProvider, FinanceBoundary, FinanceCard, FinanceReturns } from './finance/Finance'
 
 const TABS = [
   { id: 'dashboard',    label: '📊 Дашборд' },
@@ -170,6 +172,7 @@ export default function App() {
   )
 
   return (
+    <FinanceProvider legacy={data.transactions}>
     <div style={{ minHeight: '100vh', background: '#f5f3ef' }}>
       {/* NAV */}
       <nav style={{
@@ -237,11 +240,11 @@ export default function App() {
         transactions={data.transactions || []} onOpenTaxes={() => setTab('taxes')} />
 
       <div style={{ maxWidth: 1140, margin: '0 auto', padding: '28px 16px' }}>
-        {tab === 'dashboard'    && <Dashboard    data={data} save={save} onSnapshot={saveSnapshotNow} bankTransactions={bankTransactions} />}
+        {tab === 'dashboard'    && <><Dashboard data={data} save={save} onSnapshot={saveSnapshotNow} bankTransactions={bankTransactions} /><FinanceBoundary><FinanceCard /></FinanceBoundary></>}
         {tab === 'calendar'     && <Calendar     data={data} />}
         {tab === 'transactions' && <Transactions data={data} save={save} />}
-        {tab === 'debtors'      && <Debtors      data={data} save={save} />}
-        {tab === 'returns'      && <Returns      data={data} save={save} />}
+        {tab === 'debtors'      && <><Debtors data={data} save={save}/><FinanceBoundary><HotelDebts/></FinanceBoundary></>}
+        {tab === 'returns'      && <FinanceReturns><Returns data={data} save={save} /></FinanceReturns>}
         {tab === 'analytics'    && <Analytics    data={data} />}
         {tab === 'bank' && <Bank />}
         {tab === 'taxes' && <Taxes session={session} data={data} bankTransactions={bankTransactions} />}
@@ -249,5 +252,6 @@ export default function App() {
         {tab === 'import'       && <Import       data={data} save={save} />}
       </div>
     </div>
+    </FinanceProvider>
   )
 }

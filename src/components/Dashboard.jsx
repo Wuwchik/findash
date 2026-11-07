@@ -1,3 +1,5 @@
+import {useFinance} from '../finance/Finance'
+import {ownIncome,hotelDebts} from '../finance/splits.mjs'
 import { useState } from 'react'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import { fmt, fmtK, daysUntil, CATEGORIES, CAT_COLORS, Card, SectionTitle, StatCard, Btn, Input, REVENUE_YEAR_START } from '../ui.jsx'
@@ -85,13 +87,13 @@ function GoalsBanner({ data, metrics, onSave }) {
         </Btn>
       </div>
 
-      {/* Rings — виручка (всі надходження з банку), не потребує категоризації */}
+      <p style={{fontSize:12,color:"#78716c"}}>Дохід у колах — надходження за мінусом розподілених часток закладів, до інших витрат.</p>
       <div style={{ display: 'flex', gap: 12, justifyContent: 'space-around', flexWrap: 'wrap', marginBottom: 20 }}>
         <GoalRing label="День"    current={metrics.todayRevenue} goal={g.day}   color="#0247fe" />
         <GoalRing label="Тиждень" current={metrics.weekRevenue}  goal={g.week}  color="#0090ff" />
         <GoalRing label="Місяць"  current={metrics.monthRevenue} goal={g.month} color="#00c4ff" />
         <div style={{ width: 1, background: '#f0ede8', margin: '8px 4px' }} />
-        <GoalRing label="Рік · Виручка" current={metrics.yearRevenue} goal={0} color="#00ff00" yearMode />
+        <GoalRing label="Рік · Мій дохід" current={metrics.yearRevenue} goal={0} color="#00ff00" yearMode />
       </div>
 
       {/* Hotel / Tourism / Personal strip */}
@@ -135,6 +137,10 @@ function GoalsBanner({ data, metrics, onSave }) {
 
 // ── Dashboard ─────────────────────────────────────────────────
 export default function Dashboard({ data, save, bankTransactions = [] }) {
+  const {state:finance,error:financeError}=useFinance()
+  const splits=finance?.splits||[]
+  const hotelCreditors=hotelDebts(splits,finance?.payouts||[]).filter(d=>d.remaining>0)
+  const creditors=[...data.creditors,...hotelCreditors.map(d=>({...d,paid:false}))]
   const now = new Date()
   const dayStart = new Date(now); dayStart.setHours(0,0,0,0)
   const dayOfWeek = (now.getDay() + 6) % 7
@@ -146,13 +152,13 @@ export default function Dashboard({ data, save, bankTransactions = [] }) {
   // Виручка (брудний потік) — усі надходження з банку, без потреби категоризації
   // Порівнюємо за локальним часом (той самий eталон, що й для тижня/місяця/року),
   // щоб не втратити транзакції біля півночі через розбіжність UTC/локальний час
-  const bankIncome = bankTransactions.filter(t => t.type === 'income')
+  const bankIncome = (finance?.bank||bankTransactions).filter(t => t.type === 'income')
   const inPeriodBank = (t, from) => t.date && new Date(t.date) >= from
 
-  const todayRevenue = bankIncome.filter(t => inPeriodBank(t, dayStart)).reduce((s, t) => s + Number(t.amount), 0)
-  const weekRevenue   = bankIncome.filter(t => inPeriodBank(t, weekStart)).reduce((s, t) => s + Number(t.amount), 0)
-  const monthRevenue  = bankIncome.filter(t => inPeriodBank(t, monthStart)).reduce((s, t) => s + Number(t.amount), 0)
-  const yearRevenue   = bankIncome.filter(t => inPeriodBank(t, REVENUE_YEAR_START)).reduce((s, t) => s + Number(t.amount), 0)
+  const todayRevenue = bankIncome.filter(t => inPeriodBank(t, dayStart)).reduce((s, t) => s + ownIncome(t,splits), 0)
+  const weekRevenue   = bankIncome.filter(t => inPeriodBank(t, weekStart)).reduce((s, t) => s + ownIncome(t,splits), 0)
+  const monthRevenue  = bankIncome.filter(t => inPeriodBank(t, monthStart)).reduce((s, t) => s + ownIncome(t,splits), 0)
+  const yearRevenue   = bankIncome.filter(t => inPeriodBank(t, REVENUE_YEAR_START)).reduce((s, t) => s + ownIncome(t,splits), 0)
 
   const txInc = data.transactions.filter(t => t.type === 'income')
   const txExp = data.transactions.filter(t => t.type === 'expense')
@@ -171,10 +177,10 @@ export default function Dashboard({ data, save, bankTransactions = [] }) {
   const mPersonal     = txExp.filter(t => inPeriod(t.date, monthStart) && t.category === 'personal').reduce((s,t)=>s+t.amount,0)
 
   const pendingDebt   = data.debtors.filter(d=>!d.paid).reduce((s,d)=>s+d.amount,0)
-  const pendingCred   = data.creditors.filter(c=>!c.paid).reduce((s,c)=>s+c.amount,0)
+  const pendingCred   = creditors.filter(c=>!c.paid).reduce((s,c)=>s+c.amount,0)
   const pendingRet    = data.returns.filter(r=>!r.paid).reduce((s,r)=>s+r.amount,0)
   const overdueDeb    = data.debtors.filter(d=>!d.paid&&d.due&&daysUntil(d.due)<0).length
-  const overdueCred   = data.creditors.filter(c=>!c.paid&&c.due&&daysUntil(c.due)<0).length
+  const overdueCred   = creditors.filter(c=>!c.paid&&c.due&&daysUntil(c.due)<0).length
 
   // Charts
   const monthMap = {}
@@ -204,11 +210,11 @@ export default function Dashboard({ data, save, bankTransactions = [] }) {
 
   return (
     <div>
-      <GoalsBanner
+      {finance&&!financeError?<GoalsBanner
         data={data}
         metrics={{ todayRevenue, weekRevenue, monthRevenue, yearRevenue, mHotelIncome, mTourismIncome, mHotelExp, mTourismExp, mPersonal }}
         onSave={g => save({ ...data, goals: g })}
-      />
+      />:<div className="af-notice">{financeError?'Не вдалося уточнити дохід після розподілу. Оновіть фінансові дані.':'Завантаження показників доходу…'}</div>}
 
       {/* Stat cards row 1 */}
       <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:12 }}>
@@ -368,7 +374,7 @@ export default function Dashboard({ data, save, bankTransactions = [] }) {
               <SectionTitle>Найближчі платежі</SectionTitle>
               {[
                 ...data.debtors.filter(d=>!d.paid&&d.due).map(d=>({...d,color:'#16a34a',icon:'📥',prefix:'+'})),
-                ...data.creditors.filter(c=>!c.paid&&c.due).map(c=>({...c,color:'#dc2626',icon:'📤',prefix:'-'})),
+                ...creditors.filter(c=>!c.paid&&c.due).map(c=>({...c,color:'#dc2626',icon:'📤',prefix:'-'})),
                 ...data.returns.filter(r=>!r.paid&&r.due).map(r=>({...r,color:'#7c3aed',icon:'🔄',prefix:'-'})),
               ].sort((a,b)=>(a.due||'').localeCompare(b.due||'')).slice(0,5).map(item=>{
                 const d=daysUntil(item.due)
@@ -384,7 +390,7 @@ export default function Dashboard({ data, save, bankTransactions = [] }) {
                   </div>
                 )
               })}
-              {data.debtors.filter(d=>!d.paid&&d.due).length+data.creditors.filter(c=>!c.paid&&c.due).length+data.returns.filter(r=>!r.paid&&r.due).length===0&&(
+              {data.debtors.filter(d=>!d.paid&&d.due).length+creditors.filter(c=>!c.paid&&c.due).length+data.returns.filter(r=>!r.paid&&r.due).length===0&&(
                 <div style={{ color:'#b0a898', fontSize:13, textAlign:'center', padding:20 }}>Немає запланованих платежів</div>
               )}
             </Card>
