@@ -11,6 +11,7 @@ import * as L from "./logic.ts";
 //   sync        — розклад pg_cron (кожні 15 хв) або кнопка «Оновити» (власник: без затримки)
 //   set_token   — власник вставляє підписаний токен: перевіряємо в ДПС, кладемо у Vault, одразу синхронізуємо
 //   clear_token — власник відключає ДПС
+//   import_token — одноразовий імпорт підпису скриптом з комп'ютера власника (заголовок x-import-key)
 //   file        — власник відкриває PDF листа / звіту (лише дозволені шляхи ДПС)
 // Telegram (необов'язково): секрети Vault telegram_bot_token, telegram_chat_id.
 
@@ -24,7 +25,7 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, x-import-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const json = (status: number, body: unknown) =>
@@ -197,6 +198,22 @@ async function sync(force: boolean) {
   }
 }
 
+async function connectToken(input: unknown): Promise<Response> {
+  const token = L.normalizeToken(input);
+  if (!token) return json(400, { error: "Це не схоже на підписаний файл у Base64 (має починатися з MII…). Перевірте, що скопійовано повністю." });
+  try {
+    await dps(token, `ta/splatp?year=${new Date().getUTCFullYear()}`);
+  } catch (e) {
+    const msg = e instanceof DpsError && e.rejected
+      ? "ДПС не прийняла підпис. Перевірте, що підписано саме ваш РНОКПП (лише цифри), підпис внутрішній, сертифікат додано."
+      : `ДПС не відповіла: ${(e as Error).message}`;
+    return json(400, { error: msg });
+  }
+  must(await db.rpc("aura_set_dps_token", { token }), "збереження токена");
+  await setState({ token_status: "ok", last_error: null, last_ok_at: null, reports_synced_at: null, alerted_status: null });
+  return json(200, await sync(true));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   if (req.method !== "POST") return json(405, { error: "Лише POST" });
@@ -209,23 +226,21 @@ Deno.serve(async (req) => {
       return json(200, await sync(owner && body.force === true));
     }
 
+    // Одноразовий імпорт з комп'ютера власника (scripts/import-dps-token.mjs): ключ dps_import_key у Vault,
+    // формат «ключ|строк дії ISO»; після успіху ключ видаляється. Сам підпис ніде не показується.
+    if (action === "import_token") {
+      const stored = await secret("dps_import_key");
+      const [key, until] = (stored ?? "").split("|");
+      const given = req.headers.get("x-import-key") ?? "";
+      if (!key || key.length < 32 || given !== key || !until || Date.parse(until) < Date.now()) return json(403, { error: "Ключ імпорту недійсний або прострочений" });
+      const res = await connectToken(body.token);
+      if (res.status === 200) await db.rpc("aura_drop_dps_import_key");
+      return res;
+    }
+
     if (!(await isOwner(req))) return json(403, { error: "Лише власник A.U.R.A" });
 
-    if (action === "set_token") {
-      const token = L.normalizeToken(body.token);
-      if (!token) return json(400, { error: "Це не схоже на підписаний файл у Base64 (має починатися з MII…). Перевірте, що скопійовано повністю." });
-      try {
-        await dps(token, `ta/splatp?year=${new Date().getUTCFullYear()}`);
-      } catch (e) {
-        const msg = e instanceof DpsError && e.rejected
-          ? "ДПС не прийняла підпис. Перевірте, що підписано саме ваш РНОКПП (лише цифри), підпис внутрішній, сертифікат додано."
-          : `ДПС не відповіла: ${(e as Error).message}`;
-        return json(400, { error: msg });
-      }
-      must(await db.rpc("aura_set_dps_token", { token }), "збереження токена");
-      await setState({ token_status: "ok", last_error: null, last_ok_at: null, reports_synced_at: null, alerted_status: null });
-      return json(200, await sync(true));
-    }
+    if (action === "set_token") return await connectToken(body.token);
 
     if (action === "clear_token") {
       must(await db.rpc("aura_set_dps_token", { token: "" }), "видалення токена");

@@ -133,3 +133,13 @@ begin
 end $$;
 revoke all on function public.aura_set_dps_token(text) from public, anon, authenticated;
 grant execute on function public.aura_set_dps_token(text) to service_role;
+
+-- Одноразовий ключ імпорту підпису (scripts/import-dps-token.mjs) — видаляється після успішного імпорту
+create or replace function public.aura_drop_dps_import_key()
+returns void
+language sql
+security definer
+set search_path = public, vault
+as $$ delete from vault.secrets where name = 'dps_import_key' $$;
+revoke all on function public.aura_drop_dps_import_key() from public, anon, authenticated;
+grant execute on function public.aura_drop_dps_import_key() to service_role;
