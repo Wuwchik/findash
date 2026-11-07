@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Card, SectionTitle, Btn } from '../ui.jsx'
-import TaxConnection from './TaxConnection.jsx'
+import TaxDps from './TaxDps.jsx'
 import { bankMatchForEvent } from '../taxPaymentMatch.js'
 import { loadTaxSettings, saveTaxSettings } from '../taxStorage.js'
 import { DEFAULT_TAX_SETTINGS, TAX_LABELS, taxPeriods, quarterIncome, taxEvents, bankPaymentCandidates, formatUAH, displayDate, daysUntilDate } from '../taxes.js'
@@ -17,7 +17,7 @@ function Deadline({ date }) {
     {days < 0 ? 'Термін минув' : days === 0 ? 'Сьогодні' : 'Через ' + days + ' дн.'}
   </span>
 }
-export default function Taxes({ session, data, bankTransactions }) {
+export default function Taxes({ session, data, bankTransactions, onDpsChange }) {
   const [settings, setSettings] = useState(DEFAULT_TAX_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -113,27 +113,22 @@ export default function Taxes({ session, data, bankTransactions }) {
     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, marginBottom:20 }}>
       <div>
         <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:'#1a1a1a' }}>🏛️ Податки · ФОП</div>
-        <div style={note}>Податковий календар · прогноз з банку · контроль оплат</div>
+        <div style={note}>Електронний кабінет ДПС · податковий календар · прогноз з банку · контроль оплат</div>
       </div>
       <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:10}}>
-        <span style={{ background:'#fef9e7', border:'1px solid #fde68a', color:'#92400e', borderRadius:10, padding:'9px 13px', fontWeight:700, fontSize:12 }}>
-          ДПС: ще не підключено
-        </span>
-        <TaxConnection />
         {settings.notificationsEnabled
           ? <Btn variant="ghost" onClick={() => persist({...settings,notificationsEnabled:false})}>🔕 Вимкнути сповіщення</Btn>
           : <Btn variant="outline" disabled={!loaded} onClick={enableNotifications}>🔔 Увімкнути сповіщення</Btn>}
       </div>
     </div>
     <div style={{ background:'#fff7ed', border:'1px solid #fed7aa', color:'#9a3412', padding:'13px 16px', borderRadius:12, marginBottom:16, fontSize:12, lineHeight:1.65 }}>
-      ⚠️ Це прогноз A.U.R.A, а не підтверджений податковий борг. Виписка банку не доводить зарахування коштів ДПС.
-      Звіряйте дані з розділом «Стан розрахунків з бюджетом» у
-      {' '}<a target="_blank" rel="noopener noreferrer" href="https://cabinet.tax.gov.ua/" style={{ color:'#9a3412', fontWeight:700 }}>Електронному кабінеті ДПС</a>.
-      Для входу не передавайте A.U.R.A файл КЕП або пароль.
+      ⚠️ Суми в блоці «Обов’язки» нижче — прогноз A.U.R.A з банківських надходжень. Фактичний стан (нараховано, сплачено, борг) —
+      у блоці «Електронний кабінет ДПС»: це дані самої податкової. Виписка банку не доводить зарахування коштів ДПС.
     </div>
     {settings.notificationsEnabled && <div style={{...note,marginBottom:12}}>🔔 Системні нагадування активовано для відкритого сайту (за умови дозволу браузера). Після закриття всіх вкладок сповіщень поки немає.</div>}
     {permissionError && <div role="alert" style={{background:'#fff7ed',padding:12,borderRadius:9,color:'#9a3412',marginBottom:12,fontSize:12}}>{permissionError}</div>}
     {saveError && <div role="alert" style={{ background:'#fef2f2', padding:12, borderRadius:9, color:'#b91c1c', marginBottom:15, fontSize:12 }}>{saveError}</div>}
+    <TaxDps onChange={onDpsChange} />
     <Card style={{ marginBottom:16 }}>
       <SectionTitle>Податковий режим і період</SectionTitle>
       <div style={{ display:'flex', gap:12, alignItems:'center', flexWrap:'wrap', marginBottom:16 }}>
@@ -211,9 +206,5 @@ export default function Taxes({ session, data, bankTransactions }) {
         Ручна позначка означає лише твоє підтвердження, не офіційну звірку ДПС.
       </div>
     </Card>
-    <div style={{marginTop:14,...note}}>
-      Інтеграція КЕП: технічний етап ще попереду. Офіційний API ДПС вимагає криптографічно підписаний запит.
-      <a href="https://cabinet.tax.gov.ua/help/api-registers-int.html" target="_blank" rel="noopener noreferrer" style={{color:'#2c5f2e',marginLeft:5}}>Документація API</a>.
-    </div>
   </div>
 }
