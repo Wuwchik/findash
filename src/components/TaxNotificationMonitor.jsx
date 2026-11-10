@@ -9,7 +9,7 @@ const NOTIFY_DAYS = new Set([14, 7, 3, 1, 0, -1, -3, -7])
 const todayKey = () => new Date().toLocaleDateString('en-CA')
 function sendNotification(title, body, key, onOpenTaxes) {
   try {
-    const alert = new window.Notification(title, { body, tag:`aura-tax-${key}` })
+    const alert = new window.Notification(title, { body, tag:`aura-tax-${key}`, icon:'/icon-192.png' })
     alert.onclick = () => {
       window.focus()
       onOpenTaxes?.()

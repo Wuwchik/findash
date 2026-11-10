@@ -167,7 +167,7 @@ export default function App() {
 
   if (session === undefined) return (
     <div style={{ minHeight:'100vh', background:'#f5f3ef', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
-      <div style={{ fontFamily:"'Spectral',serif", fontSize:24, fontWeight:700, color:'#2c5f2e' }}>🏨 FinDash</div>
+      <img src="/brand/logo-aura-primary.svg" alt="SETUP Stay · A.U.R.A" style={{ height:40, maxWidth:'90vw' }} />
       <div style={{ fontSize:14, color:'#b0a898' }}>Перевірка сесії...</div>
     </div>
   )
@@ -176,7 +176,7 @@ export default function App() {
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:'#f5f3ef', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
-      <div style={{ fontFamily:"'Spectral',serif", fontSize:24, fontWeight:700, color:'#2c5f2e' }}>🏨 FinDash</div>
+      <img src="/brand/logo-aura-primary.svg" alt="SETUP Stay · A.U.R.A" style={{ height:40, maxWidth:'90vw' }} />
       <div style={{ fontSize:14, color:'#b0a898' }}>Завантаження даних...</div>
     </div>
   )
@@ -200,9 +200,7 @@ export default function App() {
         boxShadow: '0 1px 12px rgba(0,0,0,.06)'
       }}>
         <div style={{ padding: '12px 0' }}>
-          <div style={{ fontFamily: "'Spectral', serif", fontSize: 22, fontWeight: 800, color: '#1a1a1a', letterSpacing: -.3 }}>
-            🏨 A.U.R.A
-          </div>
+          <img src="/brand/logo-aura-primary.svg" alt="SETUP Stay · A.U.R.A" style={{ height: 34, maxWidth: '70vw', display: 'block', marginBottom: 2 }} />
           <div style={{ fontFamily: "'Spectral', serif", fontSize: 11, color: '#78716c', fontWeight: 500, marginTop: 1 }}>
             Autonomous Universal Revenue Analyst
           </div>
