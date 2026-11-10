@@ -15,7 +15,7 @@ test('third-group 5% single tax and 1% military levy forecast', () => {
   const events = taxEvents(q3, 100000, {esvExempt:false})
   assert.equal(events.find(e=>e.kind==='single').amount, 5000)
   assert.equal(events.find(e=>e.kind==='military').amount, 1000)
-  assert.equal(events.find(e=>e.kind==='esv').amount, 5280)
+  assert.equal(events.find(e=>e.kind==='esv').amount, 5707.02)
 })
 
 test('unknown taxable income must not be displayed as zero tax', () => {
