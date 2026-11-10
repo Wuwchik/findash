@@ -35,7 +35,7 @@ export default function Login() {
     <div style={{ minHeight: '100vh', background: '#f5f3ef', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <Card style={{ width: 'min(380px, 100%)' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontFamily: "'Spectral', serif", fontSize: 24, fontWeight: 800, color: '#1a1a1a' }}>🏨 A.U.R.A</div>
+          <img src="/brand/logo-aura-primary.svg" alt="SETUP Stay · A.U.R.A" style={{ height: 40, maxWidth: '100%' }} />
           <div style={{ fontSize: 12, color: '#78716c', marginTop: 4 }}>
             {mode === 'signin' ? 'Вхід до фінансового аналітика' : 'Реєстрація'}
           </div>
