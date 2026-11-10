@@ -49,11 +49,13 @@ export function quarterIncome(period, bankTransactions=[], transactions=[], over
   const ledger = transactions.filter(t => t.type === 'income' && datePart(t.date) >= period.start && datePart(t.date) <= period.end)
   return { amount: ledger.reduce((a,t)=>a+safeNumber(t.amount),0), source: ledger.length ? 'ledger' : 'missing' }
 }
+export const ESV_QUARTER = { 2025: 5280, 2026: 5707.02 }
 export function taxEvents(period, estimatedIncome, options=DEFAULT_TAX_SETTINGS) {
   const hasIncome = estimatedIncome !== null && estimatedIncome !== undefined && Number.isFinite(Number(estimatedIncome))
   const income = hasIncome ? Math.max(0,Number(estimatedIncome)) : null
-  // ЄСВ 2026: 22% × 8 000 грн = 1 760 грн/міс — так нараховує ДПС (стан розрахунків, КБК 71040000)
-  const esv = options.esvExempt ? 0 : (period.year === 2026 ? 5280 : null)
+  // Мінімальний ЄСВ за квартал = 22% × мінімальна зарплата × 3. 2025: 8 000 → 5 280; 2026: 8 647 → 5 707,02 (1 902,34/міс).
+  // (21 120 у картці ДПС 2026 року — це нарахування ЄСВ за 2025 рік з річної декларації, а не ставка 2026.)
+  const esv = options.esvExempt ? 0 : (ESV_QUARTER[period.year] ?? null)
   return [
     { id:`${period.key}:esv`, kind:'esv', due:period.esvDue, amount:esv, quarter:period.key },
     { id:`${period.key}:filing`, kind:'filing', due:period.filingDue, amount:null, quarter:period.key },

@@ -33,7 +33,8 @@ const json = (status: number, body: unknown) =>
 
 class DpsError extends Error {
   constructor(public status: number, message: string) { super(message); }
-  get rejected() { return this.status === 401 || this.status === 403; }
+  // ДПС відповідає 400 «Помилка перевірки підпису: хибний підпис», коли підпис РНОКПП застарів
+  get rejected() { return this.status === 401 || this.status === 403 || (this.status === 400 && /підпис/i.test(this.message)); }
 }
 
 async function dps(token: string, path: string, accept = "application/json"): Promise<Response> {

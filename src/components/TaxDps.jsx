@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, SectionTitle, Btn, Modal } from '../ui.jsx'
+import { p7sToToken } from '../p7sCompact.js'
 import { loadDps, syncDps, setDpsToken, clearDpsToken, openDpsFile, markLetterSeen } from '../taxDpsStorage.js'
 
 // Дані з Електронного кабінету ДПС: стан розрахунків, реквізити, листи, звітність.
@@ -14,7 +15,7 @@ const pos = v => Number(v) > 0.009
 const STATUS = {
   ok:       { text: 'ДПС: підключено', bg: '#f0fdf4', border: '#86efac', color: '#166534' },
   missing:  { text: 'ДПС: не підключено', bg: '#fef9e7', border: '#fde68a', color: '#92400e' },
-  rejected: { text: 'ДПС: підпис відхилено', bg: '#fef2f2', border: '#fecaca', color: '#b91c1c' },
+  rejected: { text: 'ДПС: підпис застарів', bg: '#fef2f2', border: '#fecaca', color: '#b91c1c' },
   error:    { text: 'ДПС: помилка оновлення', bg: '#fff7ed', border: '#fed7aa', color: '#9a3412' },
 }
 
@@ -29,14 +30,9 @@ function Copy({ value }) {
 
 const KEY_FILES = /\.(dat|jks|pfx|p12|zs2|pk8|key)$/i
 
-/** .p7s (двійковий) або вже Base64-текст → рядок Base64 */
+/** .p7s (двійковий або Base64-текст) → компактний підпис (CAdES-BES) у Base64 — інакше ДПС: «заголовок завеликий» */
 async function fileToToken(file) {
-  const buf = new Uint8Array(await file.arrayBuffer())
-  const head = new TextDecoder().decode(buf.slice(0, 3))
-  if (head === 'MII') return new TextDecoder().decode(buf)
-  let bin = ''
-  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000))
-  return btoa(bin)
+  return p7sToToken(new Uint8Array(await file.arrayBuffer()))
 }
 
 function ConnectModal({ onClose, onDone }) {
@@ -52,8 +48,8 @@ function ConnectModal({ onClose, onDone }) {
       return
     }
     if (file.size > 60000) { setError('Файл завеликий для підписаного РНОКПП. Підпишіть файл, що містить лише 10 цифр.'); return }
-    setFileName(file.name)
-    setToken(await fileToToken(file))
+    try { setToken(await fileToToken(file)); setFileName(file.name) }
+    catch (e) { setError(`Не вдалося прочитати підпис: ${e.message}. Підпишіть rnokpp.txt як «дані та підпис в одному файлі» (CAdES, .p7s), не .asice.`) }
   }
   async function submit() {
     setBusy(true); setError('')
@@ -62,14 +58,15 @@ function ConnectModal({ onClose, onDone }) {
   const step = { ...note, color: '#1a1a1a', marginBottom: 10 }
   return <Modal title="🔐 Підключити Електронний кабінет" onClose={onClose}>
     <div style={{ ...note, marginBottom: 14 }}>
-      Підпис робиться один раз на вашому комп'ютері. Ключ КЕП і пароль <strong>не передаються</strong> в A.U.R.A —
-      лише підписаний РНОКПП. Він дає тільки читання податкових даних, підписати ним документ чи подати звіт неможливо.
+      Ключ КЕП і пароль <strong>не передаються</strong> в A.U.R.A — лише підписаний РНОКПП. Він дає тільки читання
+      податкових даних, підписати ним документ чи подати звіт неможливо. <strong>ДПС приймає такий підпис лише в день
+      підписання</strong>, тож щоб оновити дані, підписуйте <code>rnokpp.txt</code> заново (той самий файл) — це хвилина.
     </div>
     <div style={step}><strong>1.</strong> У Блокноті створіть файл <code>rnokpp.txt</code>, у якому лише ваш РНОКПП — 10 цифр, без пробілів і нового рядка.</div>
     <div style={step}><strong>2.</strong> Відкрийте офіційний сервіс підпису ЦЗО:{' '}
       <a href="https://czo.gov.ua/sign" target="_blank" rel="noopener noreferrer" style={{ color: '#2c5f2e', fontWeight: 700 }}>czo.gov.ua/sign ↗</a>{' '}
       і зчитайте свій КЕП (той самий, яким входите в кабінет ДПС).</div>
-    <div style={step}><strong>3.</strong> Підпишіть <code>rnokpp.txt</code>: тип — <em>«дані та підпис в одному файлі»</em> (внутрішній, CAdES), з сертифікатом. Збережіть результат <code>.p7s</code>.</div>
+    <div style={step}><strong>3.</strong> Підпишіть <code>rnokpp.txt</code>: формат <em>CAdES</em> (не ASiC/.asice), тип — <em>«дані та підпис в одному файлі»</em>, з сертифікатом. Збережіть результат <code>.p7s</code>.</div>
     <div style={step}><strong>4.</strong> Оберіть цей <code>.p7s</code> тут:</div>
     <input type="file" accept=".p7s,.txt,.sig" onChange={e => pick(e.target.files?.[0])} style={{ fontSize: 12, marginBottom: 8 }} />
     {fileName && token && <div style={{ ...note, color: '#166534' }}>✓ {fileName} прочитано</div>}
@@ -173,7 +170,7 @@ export default function TaxDps({ onChange }) {
         <SectionTitle>Електронний кабінет ДПС</SectionTitle>
         <div style={{ ...note, marginTop: -10 }}>
           {st.payer_name ? <strong style={{ color: '#1a1a1a' }}>{st.payer_name} · </strong> : null}
-          {st.last_ok_at ? `Оновлено ${when(st.last_ok_at)} · автоматично кожні 15 хв` : 'Дані ще не отримано'}
+          {st.last_ok_at ? `Дані станом на ${when(st.last_ok_at)}${st.token_status === 'ok' ? ' · оновлюються кожні 15 хв до кінця дня підпису' : ''}` : 'Дані ще не отримано'}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -187,7 +184,7 @@ export default function TaxDps({ onChange }) {
     </div>
 
     {st.token_status === 'rejected' && <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 12, borderRadius: 10, fontSize: 12, marginBottom: 12 }}>
-      🔐 Податкова перестала приймати збережений підпис (наприклад, закінчився строк КЕП). Натисніть «Підписати заново» — це 2 хвилини.
+      🔐 Підпис для ДПС діє лише в день підписання, тому дані нижче — станом на останнє оновлення. Щоб оновити: підпишіть <code>rnokpp.txt</code> на czo.gov.ua і натисніть «Підписати заново» — це хвилина.
     </div>}
     {(error || (st.token_status === 'error' && st.last_error)) && <div role="alert" style={{ background: '#fff7ed', color: '#9a3412', padding: 10, borderRadius: 8, fontSize: 12, marginBottom: 12 }}>{error || st.last_error}</div>}
 
