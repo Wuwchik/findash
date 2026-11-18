@@ -2,7 +2,7 @@ import {createPortal} from 'react-dom'
 import React,{useState,useMemo,useEffect,useRef,useId} from 'react'
 import {GitFork} from 'lucide-react'
 import {useFinance} from './Finance'
-import {saveSplit,linkHotelPayout,unlinkHotelPayout} from './store'
+import {saveSplit,linkHotelPayout,manualHotelPayout,unlinkHotelPayout} from './store'
 import {hotelDebts} from './splits.mjs'
 import {bankDay} from './calculate.mjs'
 import {HOTELS} from '../counterparties'
@@ -78,8 +78,21 @@ function PayoutPicker({debt,onClose}) {
  <div className="af-row"><button disabled={busy||!eligible.some(b=>b.id===selected)}>Зарахувати виплату</button><button type="button" disabled={busy} onClick={onClose}>Закрити вибір списання</button></div>
  </form>
 }
+// «Оплачено»: виплата не з рахунку ФОП (готівка, інша картка) — борг закривається без банківського списання
+function ManualPayout({debt,onClose}) {
+ const {mutate,busy}=useFinance()
+ const today=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Kyiv'})
+ const [amount,setAmount]=useState(debt.remaining),[day,setDay]=useState(today),[note,setNote]=useState('')
+ return <form className="af-item" onSubmit={async e=>{e.preventDefault();if(await mutate(()=>manualHotelPayout(debt.id,amount,day,note)))onClose()}}>
+ <div className="af-grid"><label className="af-field">Сума, грн<input required type="number" min="0.01" max={debt.remaining} step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
+ <label className="af-field">Дата виплати<input required type="date" value={day} onChange={e=>setDay(e.target.value)}/></label>
+ <label className="af-field">Як виплачено (необов’язково)<input value={note} maxLength={300} placeholder="Готівка, інша картка…" onChange={e=>setNote(e.target.value)}/></label></div>
+ <div className="af-row"><button disabled={busy||!(Number(amount)>0)}>Позначити оплаченим</button><button type="button" disabled={busy} onClick={onClose}>Закрити</button></div>
+ <small>Не з рахунку ФОП: банківського списання немає, у витрати не потрапляє.</small>
+ </form>
+}
 function DebtRow({debt}) {
- const {indexes,mutate,busy}=useFinance(),[edit,setEdit]=useState(false),[choosing,setChoosing]=useState(false)
+ const {indexes,mutate,busy}=useFinance(),[edit,setEdit]=useState(false),[choosing,setChoosing]=useState(false),[manual,setManual]=useState(false)
  const payments=indexes.payoutsBySplit.get(debt.id)||[]
  const source=indexes.byBank.get(debt.bank_id)
  return <article className="af-item"><div className="af-row"><strong>{debt.hotel}</strong><strong>{money(debt.remaining)} до виплати</strong></div>
@@ -88,8 +101,11 @@ function DebtRow({debt}) {
  {source&&<button onClick={()=>setEdit(!edit)}>Редагувати розподіл</button>}
  {edit&&source&&<SplitDialog payment={source} onClose={()=>setEdit(false)}/>}
  {debt.remaining>0&&(choosing?<PayoutPicker debt={debt} onClose={()=>setChoosing(false)}/>:<button onClick={()=>setChoosing(true)}>Обрати виплату з банку</button>)}
+ {debt.remaining>0&&(manual?<ManualPayout debt={debt} onClose={()=>setManual(false)}/>:<button onClick={()=>setManual(true)}>Оплачено</button>)}
  {debt.remaining>0&&<small>Можна прив’язати декілька списань для часткової виплати. Якщо списання вже враховане у «Витратах», спершу скасуйте там його зв’язок. Зарахування не переказує гроші.</small>}
- {payments.map(p=>{const b=indexes.byBank.get(p.bank_id);return <div className="af-row" key={p.id}><span>{b?bankDay(b.date):''} · виплата {money(p.amount)}</span><button disabled={busy} onClick={()=>mutate(()=>unlinkHotelPayout(p.id))}>Скасувати прив’язку</button></div>})}
+ {payments.map(p=>{
+   if(p.method==='manual')return <div className="af-row" key={p.id}><span>{p.paid_on||''} · виплата {money(p.amount)} · вручну{p.note?` (${p.note})`:''}{p.source==='crm'?' · з CRM':''}</span><button disabled={busy} onClick={()=>mutate(()=>unlinkHotelPayout(p.id))}>Скасувати виплату</button></div>
+   const b=indexes.byBank.get(p.bank_id);return <div className="af-row" key={p.id}><span>{b?bankDay(b.date):''} · виплата {money(p.amount)}</span><button disabled={busy} onClick={()=>mutate(()=>unlinkHotelPayout(p.id))}>Скасувати прив’язку</button></div>})}
  </article>
 }
 export function HotelDebts() {
