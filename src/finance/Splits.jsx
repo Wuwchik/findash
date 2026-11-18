@@ -104,7 +104,7 @@ function DebtRow({debt}) {
  {debt.remaining>0&&(manual?<ManualPayout debt={debt} onClose={()=>setManual(false)}/>:<button onClick={()=>setManual(true)}>Оплачено</button>)}
  {debt.remaining>0&&<small>Можна прив’язати декілька списань для часткової виплати. Якщо списання вже враховане у «Витратах», спершу скасуйте там його зв’язок. Зарахування не переказує гроші.</small>}
  {payments.map(p=>{
-   if(p.method==='manual')return <div className="af-row" key={p.id}><span>{p.paid_on||''} · виплата {money(p.amount)} · вручну{p.note?` (${p.note})`:''}{p.source==='crm'?' · з CRM':''}</span><button disabled={busy} onClick={()=>mutate(()=>unlinkHotelPayout(p.id))}>Скасувати виплату</button></div>
+   if(p.method==='manual')return <div className="af-row" key={p.id}><span>{p.paid_on||''} · виплата {money(p.amount)} · вручну{p.note?` (${p.note})`:''}{p.source==='crm'?' · з CRM':''}</span><button disabled={busy} onClick={()=>{if(window.confirm(`Скасувати виплату ${money(p.amount)}? Борг закладу знову зʼявиться.`))mutate(()=>unlinkHotelPayout(p.id))}}>Скасувати виплату</button></div>
    const b=indexes.byBank.get(p.bank_id);return <div className="af-row" key={p.id}><span>{b?bankDay(b.date):''} · виплата {money(p.amount)}</span><button disabled={busy} onClick={()=>mutate(()=>unlinkHotelPayout(p.id))}>Скасувати прив’язку</button></div>})}
  </article>
 }
@@ -112,13 +112,16 @@ export function HotelDebts() {
  const {state,error,reload}=useFinance(),[showAll,setShowAll]=useState(false),[page,setPage]=useState(0)
  const debts=useMemo(()=>hotelDebts(state?.splits||[],state?.payouts||[]),[state?.splits,state?.payouts])
  const pending=useMemo(()=>debts.filter(d=>d.remaining>0),[debts])
- const shown=showAll?debts:pending,pages=Math.max(1,Math.ceil(shown.length/50)),activePage=Math.min(page,pages-1)
+ // закриті за останню добу лишаються в списку зі «Скасувати» — інакше після «Оплачено» борг зникає разом із кнопкою відміни
+ const recent=useMemo(()=>{const since=Date.now()-86400000;return new Set((state?.payouts||[]).filter(p=>!p.created_at||Date.parse(p.created_at)>=since).map(p=>p.split_id))},[state?.payouts])
+ const active=useMemo(()=>debts.filter(d=>d.remaining>0||(Number(d.hotel_amount)>0&&recent.has(d.id))),[debts,recent])
+ const shown=showAll?debts:active,pages=Math.max(1,Math.ceil(shown.length/50)),activePage=Math.min(page,pages-1)
  if(!state||error)return <div className="af af-notice">{error||'Завантаження виплат закладам…'} <button onClick={reload}>Оновити</button></div>
  return <section className="af"><div className="af-row"><h2>Виплати закладам · {money(pending.reduce((n,d)=>n+d.remaining,0))}</h2><button onClick={reload}>Оновити</button></div>
  <p>Заборгованість із розподілених надходжень. Передача до CRM вимкнена. Виплата погашає борг і не зменшує дохід повторно.</p>
  <label><input type="checkbox" checked={showAll} onChange={e=>{setShowAll(e.target.checked);setPage(0)}}/> Показати також виплачені та скасовані</label>
  {shown.slice(activePage*50,activePage*50+50).map(d=><DebtRow key={d.id} debt={d}/>)}
  <div className="af-row"><button disabled={activePage===0} onClick={()=>setPage(activePage-1)}>Попередні борги</button><span>{activePage+1}/{pages}</span><button disabled={activePage+1>=pages} onClick={()=>setPage(activePage+1)}>Наступні борги</button></div>
- {!pending.length&&!showAll&&<p>Немає невиплачених сум. Розподілити надходження можна кнопкою поруч із платежем у розділі «Банк».</p>}
+ {!active.length&&!showAll&&<p>Немає невиплачених сум. Розподілити надходження можна кнопкою поруч із платежем у розділі «Банк».</p>}
  </section>
 }

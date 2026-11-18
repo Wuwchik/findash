@@ -39,9 +39,10 @@ const esbuild=require('esbuild');
  // «Оплачено»: ручна виплата (готівка / інша картка) без банківського списання
  await act(async()=>button('Оплачено').click());
  const manualForm=[...document.querySelectorAll('form')].find(f=>f.textContent.includes('Позначити оплаченим'));
- await act(async()=>Simulate.change(manualForm.querySelector('input[type=number]'),{target:{value:'3000'}}));
  await act(async()=>{Simulate.submit(manualForm);await new Promise(r=>setTimeout(r,10))});
- assert.deepEqual(global.__calls.at(-1),['manual',3000]);assert.match(document.body.textContent,/7\s?000 грн до виплати/);assert.match(document.body.textContent,/вручну/);
+ // увесь борг виплачено — рядок не зникає, «Скасувати виплату» доступна (закрито за останню добу)
+ assert.deepEqual(global.__calls.at(-1),['manual',10000]);assert.match(document.body.textContent,/0 грн до виплати/);assert.match(document.body.textContent,/Виплачено/);assert.match(document.body.textContent,/вручну/);
+ window.confirm=()=>true;
  await act(async()=>button('Скасувати виплату').click());
  assert.match(document.body.textContent,/10\s?000 грн до виплати/);
  await act(async()=>button('Редагувати розподіл').click());
