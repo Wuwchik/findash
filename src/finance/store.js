@@ -39,6 +39,12 @@ export async function linkHotelPayout(split_id, bank_id) {
  if(error)throw error
  return {table:'payouts',row:data}
 }
+// Ручна виплата (готівка, інша картка): борг закладу закривається без банківського списання
+export async function manualHotelPayout(split_id, amount, paid_on, note) {
+ const {data,error}=await supabase.from('aura_hotel_payouts').insert({split_id,bank_id:null,method:'manual',amount:Number(amount),paid_on:paid_on||null,note:note?.trim()||null,source:'aura'}).select('*').single()
+ if(error)throw error
+ return {table:'payouts',row:data}
+}
 export async function unlinkHotelPayout(id) {
  const {error}=await supabase.from('aura_hotel_payouts').delete().eq('id',id)
  if(error)throw error

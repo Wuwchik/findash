@@ -13,6 +13,7 @@ const esbuild=require('esbuild');
  const result=await esbuild.build({stdin:{contents:"export {FinanceProvider,FinanceCard,FinanceReturns} from './src/finance/Finance';export {SplitButton,HotelDebts} from './src/finance/Splits';export {default as Bank} from './src/components/Bank';export {default as Dashboard} from './src/components/Dashboard'",resolveDir:root,loader:'jsx'},write:false,jsx:'automatic',platform:'node',format:'cjs',bundle:true,external:['react','react-dom'],loader:{'.css':'empty'},plugins:[{name:'fixture-store',setup(b){b.onResolve({filter:/\/storage$/},()=>({path:'storage',namespace:'bank-fixture'}));b.onLoad({filter:/.*/,namespace:'bank-fixture'},()=>({contents:'export async function syncPrivatBank(){return {success:true,total:2000,saved:0}}'}));b.onResolve({filter:/\/store$/},()=>({path:'store',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`export async function loadFinance(){global.__loads++;return structuredClone(global.__finance)}
  export async function saveSplit(row){if(global.__reject)throw new Error('Test validation rejection');global.__calls.push(['split',row]);global.__finance.splits=[{...row,id:'s',updated_at:String(Date.now())}];return {table:'splits',row:global.__finance.splits[0]}}
  export async function linkHotelPayout(split_id,bank_id){global.__calls.push(['payout',bank_id]);global.__finance.payouts=[{id:'p',split_id,bank_id,amount:6000}];return {table:'payouts',row:global.__finance.payouts[0]}}
+ export async function manualHotelPayout(split_id,amount,paid_on,note){global.__calls.push(['manual',Number(amount)]);global.__finance.payouts=[{id:'m',split_id,bank_id:null,method:'manual',amount:Number(amount),paid_on,note,source:'aura'}];return {table:'payouts',row:global.__finance.payouts[0]}}
  export async function unlinkHotelPayout(id){global.__finance.payouts=[];return {table:'payouts',remove:id}}
  export async function saveFinance(){} export async function removeLink(){} export async function saveBankField(){}` }));}}]});
  const Module=require('module'),m=new Module(path.join(root,'qa.cjs'),module);m.filename=path.join(root,'qa.cjs');m.paths=Module._nodeModulePaths(root);m._compile(result.outputFiles[0].text,m.filename);
@@ -34,6 +35,14 @@ const esbuild=require('esbuild');
  const card=[...document.querySelectorAll('div')].find(d=>d.textContent==='Кредиторка');
  assert.match(card.parentElement.textContent,/4\s?000/);
  await act(async()=>button('Скасувати прив’язку').click());
+ assert.match(document.body.textContent,/10\s?000 грн до виплати/);
+ // «Оплачено»: ручна виплата (готівка / інша картка) без банківського списання
+ await act(async()=>button('Оплачено').click());
+ const manualForm=[...document.querySelectorAll('form')].find(f=>f.textContent.includes('Позначити оплаченим'));
+ await act(async()=>Simulate.change(manualForm.querySelector('input[type=number]'),{target:{value:'3000'}}));
+ await act(async()=>{Simulate.submit(manualForm);await new Promise(r=>setTimeout(r,10))});
+ assert.deepEqual(global.__calls.at(-1),['manual',3000]);assert.match(document.body.textContent,/7\s?000 грн до виплати/);assert.match(document.body.textContent,/вручну/);
+ await act(async()=>button('Скасувати виплату').click());
  assert.match(document.body.textContent,/10\s?000 грн до виплати/);
  await act(async()=>button('Редагувати розподіл').click());
  await act(async()=>{button('Скасувати розподіл').click();await new Promise(r=>setTimeout(r,10))});
